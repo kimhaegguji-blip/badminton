@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <!-- 모바일 환경을 고려한 뷰포트 설정 (터치 줌 방지 및 반응형 레이아웃) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Retro Mini Badminton Challenge</title>
+    <!-- Tailwind CSS 로드 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Nunito:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Nunito', 'Jua', sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        /* 캔버스 테두리 광원 효과 */
+        .game-container {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.25), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex flex-col justify-between items-center overflow-x-hidden p-2 sm:p-4">
+
+    <!-- 상단 헤더 영역 -->
+    <header class="w-full max-w-4xl flex justify-between items-center px-4 py-2 bg-slate-800/80 rounded-2xl border border-slate-700/50 backdrop-blur-md mb-2">
+        <div class="flex items-center gap-2">
+            <span class="text-2xl sm:text-3xl">🏸</span>
+            <div>
+                <h1 class="text-base sm:text-xl font-black tracking-wider text-amber-400">MINI BADMINTON</h1>
+                <p class="text-[10px] sm:text-xs text-slate-400">PC: 방향키 & Space | Mobile: 터치 패드</p>
+            </div>
+        </div>
+        <!-- 실시간 스코어보드 -->
+        <div class="flex items-center gap-4 bg-slate-950/80 px-4 py-1.5 rounded-xl border border-slate-700/30">
+            <div class="text-center">
+                <span class="block text-[9px] text-red-400 font-bold">PLAYER A</span>
+                <span id="scoreA" class="text-lg sm:text-2xl font-black text-red-500">0</span>
+            </div>
+            <div class="text-slate-500 font-black text-sm sm:text-lg">:</div>
+            <div class="text-center">
+                <span class="block text-[9px] text-blue-400 font-bold">PLAYER B (AI)</span>
+                <span id="scoreB" class="text-lg sm:text-2xl font-black text-blue-500">0</span>
+            </div>
+        </div>
+        <!-- 리스타트 버튼 -->
+        <button id="btnRestart" class="bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-slate-950 text-xs sm:text-sm font-extrabold px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl transition-all shadow-md active:scale-95">
+            RESTART
+        </button>
+    </header>
+
+    <!-- 게임 뷰포트 영역 -->
+    <main class="relative w-full max-w-4xl aspect-[2/1] game-container bg-slate-950 rounded-2xl overflow-hidden border-4 border-slate-700">
+        <!-- 메인 게임 캔버스 -->
+        <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+
+        <!-- 인게임 점수 알림 & 스매시 오버레이 메시지 -->
+        <div id="gameAnnounce" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none transition-all duration-300 opacity-0 scale-75">
+            <h2 id="announceText" class="text-3xl sm:text-6xl font-black text-yellow-400 drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] tracking-wider"></h2>
+            <p id="announceSubtext" class="text-sm sm:text-xl text-white mt-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"></p>
+        </div>
+
+        <!-- 게임 오버 / 승리 팝업 -->
+        <div id="gameOverModal" class="absolute inset-0 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center hidden z-20">
+            <span class="text-6xl sm:text-8xl animate-bounce mb-2">🏆</span>
+            <h2 id="winnerText" class="text-4xl sm:text-6xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500 drop-shadow">PLAYER A WINS!</h2>
+            <p class="text-slate-400 text-sm sm:text-lg mt-2 mb-6">배드민턴 코트의 제왕으로 등극하셨습니다!</p>
+            <button id="btnModalRestart" class="px-8 py-3 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-slate-950 font-black text-lg rounded-2xl shadow-lg shadow-amber-500/20 active:scale-95 transition-all">
+                다시 대결하기
+            </button>
+        </div>
+    </main>
+
+    <!-- 모바일 전용 가상 조작 버튼 패널 -->
+    <footer class="w-full max-w-4xl grid grid-cols-2 gap-4 mt-2 px-1 pb-2">
+        <!-- 왼쪽: 이동 컨트롤 패드 -->
+        <div class="flex items-center gap-2">
+            <button id="btnLeft" class="flex-1 aspect-[4/3] sm:aspect-square bg-slate-800/80 active:bg-slate-700 border-b-4 border-slate-950 active:border-b-0 rounded-2xl flex items-center justify-center text-2xl sm:text-3xl shadow-lg active:translate-y-[4px] transition-all" style="-webkit-tap-highlight-color: transparent;">
+                ◀
+            </button>
+            <button id="btnRight" class="flex-1 aspect-[4/3] sm:aspect-square bg-slate-800/80 active:bg-slate-700 border-b-4 border-slate-950 active:border-b-0 rounded-2xl flex items-center justify-center text-2xl sm:text-3xl shadow-lg active:translate-y-[4px] transition-all" style="-webkit-tap-highlight-color: transparent;">
+                ▶
+            </button>
+        </div>
+
+        <!-- 오른쪽: 액션 컨트롤 패드 (점프 / 타격) -->
+        <div class="flex items-center gap-2">
+            <button id="btnJump" class="flex-1 aspect-[4/3] sm:aspect-square bg-blue-600/80 active:bg-blue-500 border-b-4 border-blue-950 active:border-b-0 rounded-2xl flex flex-col items-center justify-center shadow-lg active:translate-y-[4px] transition-all" style="-webkit-tap-highlight-color: transparent;">
+                <span class="text-xl sm:text-2xl">▲</span>
+                <span class="text-[10px] sm:text-xs font-bold mt-1">JUMP</span>
+            </button>
+            <button id="btnHit" class="flex-1 aspect-[4/3] sm:aspect-square bg-red-600/90 active:bg-red-500 border-b-4 border-red-950 active:border-b-0 rounded-2xl flex flex-col items-center justify-center shadow-lg active:translate-y-[4px] transition-all" style="-webkit-tap-highlight-color: transparent;">
+                <span class="text-xl sm:text-2xl">🎾</span>
+                <span class="text-[10px] sm:text-xs font-bold mt-1">HIT</span>
+            </button>
+        </div>
+    </footer>
+
+    <script>
+        // --- 사운드 효과음 신시사이저 (Web Audio API) ---
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new AudioCtx();
+            }
+        }
+
+        // '팅', '통', '푸슉' 사운드를 신디사이징 기술로 구현
+        function playSound(type) {
+            initAudio();
+            if (!audioCtx) return;
+
+            // 브라우저 보완책: 일시정지 상태면 재개
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+
+            if (type === 'ting') {
+                // 팅! (맑고 명쾌한 정타 라켓 타구음)
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(880, now); // A5 note
+                osc.frequency.exponentialRampToValueAtTime(1200, now + 0.02);
+                osc.frequency.exponentialRampToValueAtTime(100, now + 0.15);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.16);
+            } else if (type === 'tong') {
+                // 통! (약간 낮고 부드러운 드라이브나 수비 타구음)
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, now); // A4 note
+                osc.frequency.exponentialRampToValueAtTime(550, now + 0.03);
+                osc.frequency.exponentialRampToValueAtTime(80, now + 0.2);
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.21);
+            } else if (type === 'phoosh') {
+                // 푸슉! (강력한 스매시 타구음, 약간의 화이트노이즈 느낌 가미)
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(2000, now + 0.04);
+                osc.frequency.exponentialRampToValueAtTime(50, now + 0.25);
+                gain.gain.setValueAtTime(0.5, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                osc.start(now);
+                osc.stop(now + 0.26);
+            } else if (type === 'score') {
+                // 득점 성공 사운드
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+                osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.linearRampToValueAtTime(0.15, now + 0.25);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            } else if (type === 'out') {
+                // 실점/아웃 사운드
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.linearRampToValueAtTime(110, now + 0.3);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                osc.start(now);
+                osc.stop(now + 0.35);
+            }
+        }
+
+        // --- STREAMING_CHUNK: Initializing canvas and core game configs... ---
+        // --- 캔버스 설정 및 물리 시스템 설정 ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 가상 월드 해상도 고정 (800x400 비율 보존)
+        const VIEW_WIDTH = 800;
+        const VIEW_HEIGHT = 400;
+        canvas.width = VIEW_WIDTH;
+        canvas.height = VIEW_HEIGHT;
+
+        // 게임 물리 변수들
+        const GROUND_Y = 340; // 바닥 높이
+        const GRAVITY = 0.25; // 중력 가속도
+        const NET_X = VIEW_WIDTH / 2; // 네트 중앙 X값
+        const NET_HEIGHT = 80; // 네트 높이 (바닥 위로 솟은 크기)
+
+        // 키보드 입력 상태 트래킹
+        const keys = {
+            ArrowLeft: false,
+            ArrowRight: false,
+            ArrowUp: false,
+            Space: false
+        };
+
+        // 모바일 터치 상태 트래킹
+        const touches = {
+            left: false,
+            right: false,
+            jump: false,
+            hit: false
+        };
+
+        // --- STREAMING_CHUNK: Defining game state and game entities... ---
+        // 게임 상태 관리
+        let scoreA = 0;
+        let scoreB = 0;
+        let gameOver = false;
+        let lastToucher = null; // 마지막으로 셔틀콕을 친 사람 ('A' 또는 'B')
+        let trailEffect = []; // 셔틀콕 잔상 이펙트 어레이
+        let scoreMessageTimeout = null;
+
+        // 구름 이펙트 배경용 데이터
+        const clouds = [
+            { x: 100, y: 60, scale: 0.8, speed: 0.1 },
+            { x: 450, y: 40, scale: 1.2, speed: 0.15 },
+            { x: 750, y: 80, scale: 0.6, speed: 0.08 }
+        ];
+
+        // 1. 플레이어 A 정의 (사용자 - 빨간색)
+        const playerA = {
+            x: 150,
+            y: GROUND_Y - 50,
+            width: 32,
+            height: 50,
+            vx: 0,
+            vy: 0,
+            speed: 4.5,
+            jumpForce: -8,
+            isGrounded: true,
+            color: '#ef4444', // 빨간색
+            swingTimer: 0,
+            swingDuration: 12,
+            racketAngle: 0,
+            score: 0,
+            facing: 'right'
+        };
+
+        // 2. 플레이어 B 정의 (AI - 파란색)
+        const playerB = {
+            x: 650,
+            y: GROUND_Y - 50,
+            width: 32,
+            height: 50,
+            vx: 0,
+            vy: 0,
+            speed: 4.0, // AI 이동 속도
+            jumpForce: -8,
+            isGrounded: true,
+            color: '#3b82f6', // 파란색
+            swingTimer: 0,
+            swingDuration: 12,
+            racketAngle: 0,
+            score: 0,
+            facing: 'left'
+        };
+
+        // 3. 셔틀콕 정의
+        const shuttlecock = {
+            x: 200,
+            y: 100,
+            vx: 3,
+            vy: -4,
+            radius: 8,
+            drag: 0.99, // 공기 저항 (수평 감쇠 가속도)
+            verticalDrag: 0.992, // 수직 공기 저항
+            bounce: 0.1,
+            rotation: 0
+        };
+
+        // --- STREAMING_CHUNK: Setup Event Listeners for PC and Touch devices... ---
+        // --- 컨트롤러 이벤트 바인딩 ---
+
+        // 키보드 이벤트 리스너 (PC)
+        window.addEventListener('keydown', (e) => {
+            initAudio(); // 최초 유저 터치/클릭 연동 오디오 활성화
+            if (e.code === 'ArrowLeft') keys.ArrowLeft = true;
+            if (e.code === 'ArrowRight') keys.ArrowRight = true;
+            if (e.code === 'ArrowUp') keys.ArrowUp = true;
+            if (e.code === 'Space') {
+                if (!keys.Space) {
+                    playerA.swingTimer = playerA.swingDuration;
+                    checkRacketHit(playerA, 'A');
+                }
+                keys.Space = true;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowLeft') keys.ArrowLeft = false;
+            if (e.code === 'ArrowRight') keys.ArrowRight = false;
+            if (e.code === 'ArrowUp') keys.ArrowUp = false;
+            if (e.code === 'Space') keys.Space = false;
+        });
+
+        // 모바일 가상 버튼 바인딩 (터치 장치 전용)
+        const configureTouchBtn = (id, targetState) => {
+            const btn = document.getElementById(id);
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                initAudio();
+                touches[targetState] = true;
+                
+                // 일회성 입력 처리 (점프 및 스윙)
+                if (targetState === 'jump' && playerA.isGrounded) {
+                    playerA.vy = playerA.jumpForce;
+                    playerA.isGrounded = false;
+                }
+                if (targetState === 'hit') {
+                    if (playerA.swingTimer === 0) {
+                        playerA.swingTimer = playerA.swingDuration;
+                        checkRacketHit(playerA, 'A');
+                    }
+                }
+            });
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                touches[targetState] = false;
+            });
+        };
+
+        configureTouchBtn('btnLeft', 'left');
+        configureTouchBtn('btnRight', 'right');
+        configureTouchBtn('btnJump', 'jump');
+        configureTouchBtn('btnHit', 'hit');
+
+        // 리스타트 버튼 처리
+        const handleRestart = () => {
+            scoreA = 0;
+            scoreB = 0;
+            document.getElementById('scoreA').innerText = scoreA;
+            document.getElementById('scoreB').innerText = scoreB;
+            gameOver = false;
+            document.getElementById('gameOverModal').classList.add('hidden');
+            resetServe('A');
+        };
+
+        document.getElementById('btnRestart').addEventListener('click', handleRestart);
+        document.getElementById('btnModalRestart').addEventListener('click', handleRestart);
+
+        // --- STREAMING_CHUNK: Implementing shuttlecock hit check mechanics... ---
+        // --- 배드민턴 타격 물리 계산 엔진 ---
+
+        function checkRacketHit(player, sender) {
+            // 라켓 휘두르기 시작할 때 슉! 소리 재생
+            playSound('phoosh');
+
+            // 라켓 타격 판정 범위 (라켓 길이 반영)
+            const reach = 60;
+            const px = player.x + player.width / 2;
+            const py = player.y + player.height / 2;
+
+            // 라켓과 셔틀콕 사이의 거리 구하기
+            const dx = shuttlecock.x - px;
+            const dy = shuttlecock.y - py;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < reach) {
+                // 타격 성공!
+                lastToucher = sender;
+
+                // 스펙타클 이펙트를 위한 타격 타이밍 및 충돌 상태 분석
+                const timingFactor = Math.abs(player.swingTimer - player.swingDuration/2) / (player.swingDuration/2);
+                let hitPower = 10; // 기본 파워
+                let hitSoundType = 'tong';
+
+                if (timingFactor < 0.3) {
+                    // 저스트 타이밍! (완벽한 스매시 기회)
+                    hitPower = 15;
+                    hitSoundType = 'ting';
+                    triggerAnnounce("⚡ SMASH!", "강력하게 내리꽂는 강속구!");
+                } else if (timingFactor < 0.6) {
+                    hitPower = 12;
+                    hitSoundType = 'tong';
+                }
+
+                // 타구 궤적 벡터 구하기
+                // 보낸 이의 위치 및 누른 방향키에 기초하여 발사 각도 계산
+                let angle = sender === 'A' ? -Math.PI / 6 : -Math.PI * 5 / 6; // 기본 상향 전진포
+
+                if (sender === 'A') {
+                    // 키 이동 속도를 더해서 타구 속도 보정
+                    const movementBonus = player.vx * 0.4;
+                    shuttlecock.vx = Math.cos(angle) * hitPower + movementBonus + 2;
+                    shuttlecock.vy = Math.sin(angle) * (hitPower * 0.9) - 3;
+                } else {
+                    // AI의 경우
+                    const movementBonus = player.vx * 0.4;
+                    shuttlecock.vx = -Math.cos(angle) * -hitPower + movementBonus - 2;
+                    shuttlecock.vy = Math.sin(angle) * (hitPower * 0.9) - 3;
+                }
+
+                // 타격 소리 연주
+                playSound(hitSoundType);
+
+                // 스매시 스파크 이펙트 재생을 위해 잔상 활성화
+                for (let i = 0; i < 5; i++) {
+                    trailEffect.push({
+                        x: shuttlecock.x,
+                        y: shuttlecock.y,
+                        alpha: 0.8,
+                        size: 6
+                    });
+                }
+            }
+        }
+
+        // --- STREAMING_CHUNK: Defining score rule check and point reset logic... ---
+        // --- 득점 규칙 판정 및 서브 리셋 로직 ---
+
+        function triggerAnnounce(mainText, subText) {
+            const container = document.getElementById('gameAnnounce');
+            const main = document.getElementById('announceText');
+            const sub = document.getElementById('announceSubtext');
+
+            main.innerText = mainText;
+            sub.innerText = subText;
+
+            container.classList.remove('opacity-0', 'scale-75');
+            container.classList.add('opacity-100', 'scale-100');
+
+            if (scoreMessageTimeout) clearTimeout(scoreMessageTimeout);
+            scoreMessageTimeout = setTimeout(() => {
+                container.classList.remove('opacity-100', 'scale-100');
+                container.classList.add('opacity-0', 'scale-75');
+            }, 1200);
+        }
+
+        function resetServe(winner) {
+            // 서브를 줄 사람 쪽에서 공을 새로 띄워줌
+            shuttlecock.y = 80;
+            shuttlecock.vy = -2;
+            lastToucher = null;
+
+            if (winner === 'A') {
+                shuttlecock.x = 200;
+                shuttlecock.vx = 2;
+            } else {
+                shuttlecock.x = 600;
+                shuttlecock.vx = -2;
+            }
+
+            // 플레이어들 시작 포지션 재정렬
+            playerA.x = 150;
+            playerA.y = GROUND_Y - playerA.height;
+            playerA.vx = 0;
+            playerA.vy = 0;
+
+            playerB.x = 650;
+            playerB.y = GROUND_Y - playerB.height;
+            playerB.vx = 0;
+            playerB.vy = 0;
+        }
+
+        function checkPointsAndRules() {
+            // 바닥에 닿거나 네트에 걸릴 때 판단
+            
+            // 1. 네트 충돌 검사
+            // 네트 기둥은 NET_X 지점에 있으며 두께가 6, 높이가 NET_HEIGHT (바닥에서 위로 솟아오름)
+            const netTopY = GROUND_Y - NET_HEIGHT;
+            if (shuttlecock.x + shuttlecock.radius >= NET_X - 3 && shuttlecock.x - shuttlecock.radius <= NET_X + 3) {
+                if (shuttlecock.y >= netTopY) {
+                    // 네트에 정확히 걸려버렸을 때
+                    playSound('out');
+                    shuttlecock.vx = -shuttlecock.vx * 0.4; // 튕겨나감
+                    
+                    // 마지막으로 친 사람의 반대편이 득점
+                    if (lastToucher === 'A') {
+                        scoreB++;
+                        triggerAnnounce("Net Catch!", "플레이어 A가 네트에 걸렸습니다.");
+                        playSound('out');
+                        updateScoreDisplay();
+                        resetServe('B');
+                    } else if (lastToucher === 'B') {
+                        scoreA++;
+                        triggerAnnounce("Net Catch!", "AI가 네트에 걸렸습니다.");
+                        playSound('score');
+                        updateScoreDisplay();
+                        resetServe('A');
+                    } else {
+                        // 아무도 안 쳤는데 떨어진 낙구
+                        if (shuttlecock.x < NET_X) {
+                            scoreB++;
+                            updateScoreDisplay();
+                            resetServe('B');
+                        } else {
+                            scoreA++;
+                            updateScoreDisplay();
+                            resetServe('A');
+                        }
+                    }
+                    return;
+                }
+            }
+
+            // 2. 바닥 착지 검사
+            if (shuttlecock.y + shuttlecock.radius >= GROUND_Y) {
+                shuttlecock.y = GROUND_Y - shuttlecock.radius;
+                
+                // 셔틀콕이 바닥의 어느 영역에 낙하했는지 판별
+                if (shuttlecock.x < NET_X) {
+                    // A의 진영 바닥에 떨어짐 -> B 득점
+                    scoreB++;
+                    playSound('out');
+                    triggerAnnounce("POINT B!", "코트 안 인바운드 득점!");
+                    updateScoreDisplay();
+                    checkGameOver();
+                    if (!gameOver) resetServe('B');
+                } else {
+                    // B의 진영 바닥에 떨어짐 -> A 득점
+                    scoreA++;
+                    playSound('score');
+                    triggerAnnounce("POINT A!", "강공 성공! 1점 획득!");
+                    updateScoreDisplay();
+                    checkGameOver();
+                    if (!gameOver) resetServe('A');
+                }
+            }
+        }
+
+        function updateScoreDisplay() {
+            document.getElementById('scoreA').innerText = scoreA;
+            document.getElementById('scoreB').innerText = scoreB;
+        }
+
+        function checkGameOver() {
+            if (scoreA >= 11) {
+                gameOver = true;
+                document.getElementById('winnerText').innerText = "PLAYER A WINS!";
+                document.getElementById('winnerText').className = "text-4xl sm:text-6xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-yellow-400 to-amber-500 drop-shadow";
+                document.getElementById('gameOverModal').classList.remove('hidden');
+            } else if (scoreB >= 11) {
+                gameOver = true;
+                document.getElementById('winnerText').innerText = "PLAYER B (AI) WINS!";
+                document.getElementById('winnerText').className = "text-4xl sm:text-6xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-purple-400 to-indigo-500 drop-shadow";
+                document.getElementById('gameOverModal').classList.remove('hidden');
+            }
+        }
+
+        // --- STREAMING_CHUNK: Designing complex AI decision model... ---
+        // --- 플레이어 B (지능형 AI 모델링) 구현 ---
+
+        function updateAI() {
+            const centerOfBCourt = 600; // AI 코트의 중앙 지점
+
+            // 공이 AI 진영으로 넘어오는 상황인지 판단
+            if (shuttlecock.vx > 0 && shuttlecock.x > NET_X - 100) {
+                // 공의 예측 낙하지점으로 부드럽게 이동
+                const targetX = shuttlecock.x;
+
+                // 공과의 거리에 따른 좌우 밀착 무빙
+                if (playerB.x + playerB.width/2 < targetX - 10) {
+                    playerB.vx = playerB.speed;
+                } else if (playerB.x + playerB.width/2 > targetX + 10) {
+                    playerB.vx = -playerB.speed;
+                } else {
+                    playerB.vx = 0;
+                }
+
+                // 적절한 타이밍에 점프 점수 계산 (공이 높이 떠서 올 때 수비 점프 스매시 구현)
+                if (shuttlecock.y < playerB.y - 40 && Math.abs(playerB.x - shuttlecock.x) < 50 && playerB.isGrounded && Math.random() < 0.05) {
+                    playerB.vy = playerB.jumpForce;
+                    playerB.isGrounded = false;
+                }
+
+                // AI의 휘두르기(Swing) 트리거 검증 범위 설정
+                const swingDistanceX = Math.abs(playerB.x + playerB.width/2 - shuttlecock.x);
+                const swingDistanceY = Math.abs(playerB.y + playerB.height/2 - shuttlecock.y);
+
+                if (swingDistanceX < 45 && swingDistanceY < 50 && playerB.swingTimer === 0) {
+                    playerB.swingTimer = playerB.swingDuration;
+                    checkRacketHit(playerB, 'B');
+                }
+
+            } else {
+                // 공이 플레이어 A 코트에 머무를 때는 원래 최적 수비 포지션으로 백스텝
+                if (playerB.x + playerB.width/2 < centerOfBCourt - 10) {
+                    playerB.vx = playerB.speed * 0.6; // 약간 여유롭게 후퇴
+                } else if (playerB.x + playerB.width/2 > centerOfBCourt + 10) {
+                    playerB.vx = -playerB.speed * 0.6;
+                } else {
+                    playerB.vx = 0;
+                }
+            }
+        }
+
+        // --- STREAMING_CHUNK: Updating movement states and entity collision physics... ---
+        // --- 갱신 및 물리 업데이트 사이클 ---
+
+        function update() {
+            if (gameOver) return;
+
+            // 1. 플레이어 A (사용자) 입력 갱신
+            playerA.vx = 0;
+            if (keys.ArrowLeft || touches.left) {
+                playerA.vx = -playerA.speed;
+                playerA.facing = 'left';
+            }
+            if (keys.ArrowRight || touches.right) {
+                playerA.vx = playerA.speed;
+                playerA.facing = 'right';
+            }
+
+            // 플레이어 A 점프 적용
+            if ((keys.ArrowUp || touches.jump) && playerA.isGrounded) {
+                playerA.vy = playerA.jumpForce;
+                playerA.isGrounded = false;
+            }
+
+            // 플레이어 A 중력 및 이동 한계치 보정
+            playerA.vy += GRAVITY;
+            playerA.x += playerA.vx;
+            playerA.y += playerA.vy;
+
+            if (playerA.y >= GROUND_Y - playerA.height) {
+                playerA.y = GROUND_Y - playerA.height;
+                playerA.vy = 0;
+                playerA.isGrounded = true;
+            }
+
+            // 코트 밖 및 네트 침범 제한 수칙 적용
+            if (playerA.x < 10) playerA.x = 10;
+            if (playerA.x > NET_X - playerA.width - 15) playerA.x = NET_X - playerA.width - 15;
+
+            // 2. 플레이어 B (AI) 업데이트 및 중력
+            updateAI();
+            playerB.vy += GRAVITY;
+            playerB.x += playerB.vx;
+            playerB.y += playerB.vy;
+
+            if (playerB.y >= GROUND_Y - playerB.height) {
+                playerB.y = GROUND_Y - playerB.height;
+                playerB.vy = 0;
+                playerB.isGrounded = true;
+            }
+
+            // AI 이동 제한
+            if (playerB.x > VIEW_WIDTH - playerB.width - 10) playerB.x = VIEW_WIDTH - playerB.width - 10;
+            if (playerB.x < NET_X + 15) playerB.x = NET_X + 15;
+
+            // 라켓 스윙 각도 애니메이션 계산용 감쇠율
+            if (playerA.swingTimer > 0) playerA.swingTimer--;
+            if (playerB.swingTimer > 0) playerB.swingTimer--;
+
+            // 3. 셔틀콕 물리 움직임 갱신
+            shuttlecock.vy += GRAVITY; // 중력 가속도
+
+            // 배드민턴 고유의 저항 가속도 대입
+            shuttlecock.vx *= shuttlecock.drag;
+            shuttlecock.vy *= shuttlecock.verticalDrag;
+
+            shuttlecock.x += shuttlecock.vx;
+            shuttlecock.y += shuttlecock.vy;
+
+            // 날아가는 방향 기반으로 셔틀콕 각도 연산
+            shuttlecock.rotation = Math.atan2(shuttlecock.vy, shuttlecock.vx);
+
+            // 셔틀콕 잔상 이펙트 가산
+            trailEffect.push({
+                x: shuttlecock.x,
+                y: shuttlecock.y,
+                alpha: 0.6,
+                size: 4
+            });
+            if (trailEffect.length > 8) {
+                trailEffect.shift();
+            }
+
+            // 아웃 및 득점 규정 규칙 수시 검사
+            checkPointsAndRules();
+
+            // 하늘 구름 둥실둥실 애니메이션 구현
+            clouds.forEach(c => {
+                c.x += c.speed;
+                if (c.x > VIEW_WIDTH + 80) c.x = -80;
+            });
+        }
+
+        // --- STREAMING_CHUNK: Drawing backgrounds and rendering elements onto canvas... ---
+        // --- 캔버스 그래픽 렌더링 시스템 ---
+
+        function drawPlayer(p, type) {
+            ctx.save();
+            
+            // 귀여운 캐릭터 셰이더 그리기
+            ctx.fillStyle = p.color;
+            ctx.shadowColor = 'rgba(0,0,0,0.15)';
+            ctx.shadowBlur = 4;
+            ctx.shadowOffsetY = 4;
+            
+            // 모서리가 둥글게 깎인 몸체 디자인
+            const radius = 6;
+            ctx.beginPath();
+            ctx.moveTo(p.x + radius, p.y);
+            ctx.lineTo(p.x + p.width - radius, p.y);
+            ctx.quadraticCurveTo(p.x + p.width, p.y, p.x + p.width, p.y + radius);
+            ctx.lineTo(p.x + p.width, p.y + p.height - radius);
+            ctx.quadraticCurveTo(p.x + p.width, p.y + p.height, p.x + p.width - radius, p.y + p.height);
+            ctx.lineTo(p.x + radius, p.y + p.height);
+            ctx.quadraticCurveTo(p.x, p.y + p.height, p.x, p.y + p.height - radius);
+            ctx.lineTo(p.x, p.y + radius);
+            ctx.quadraticCurveTo(p.x, p.y, p.x + radius, p.y);
+            ctx.closePath();
+            ctx.fill();
+            
+            // 눈그리기 (세련되고 생동감 넘치는 귀여운 얼굴 도식화)
+            ctx.fillStyle = '#1e293b';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+            const eyeY = p.y + 15;
+            if (type === 'A') {
+                ctx.beginPath();
+                ctx.arc(p.x + p.width - 12, eyeY, 3.5, 0, Math.PI * 2);
+                ctx.fill();
+                // 사랑스러운 웃음 입모양
+                ctx.strokeStyle = '#1e293b';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(p.x + p.width - 8, eyeY + 6, 3, 0, Math.PI);
+                ctx.stroke();
+            } else {
+                ctx.beginPath();
+                ctx.arc(p.x + 12, eyeY, 3.5, 0, Math.PI * 2);
+                ctx.fill();
+                // 집중한 AI의 일자 눈썹과 일자 입
+                ctx.strokeStyle = '#1e293b';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(p.x + 10, eyeY + 6);
+                ctx.lineTo(p.x + 16, eyeY + 6);
+                ctx.stroke();
+            }
+
+            // 라켓 렌더링 세팅
+            // 휘두를 때 각도 역동적으로 제어
+            let racketAngle = type === 'A' ? -Math.PI / 4 : -Math.PI * 3 / 4;
+            if (p.swingTimer > 0) {
+                const swingProgress = (p.swingDuration - p.swingTimer) / p.swingDuration;
+                const swingSweep = Math.PI * 1.2; // 휘두르는 궤적 크기
+                racketAngle += type === 'A' ? swingProgress * swingSweep : -swingProgress * swingSweep;
+            }
+
+            // 라켓의 베이스 좌표점 지정 (캐릭터 중심 부분)
+            const rx = p.x + p.width/2;
+            const ry = p.y + p.height/2;
+
+            ctx.translate(rx, ry);
+            ctx.rotate(racketAngle);
+
+            // 라켓 대 그리기
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(0, -32);
+            ctx.stroke();
+
+            // 라켓 격자 타원형 네트 그리기
+            ctx.strokeStyle = '#f8fafc';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.ellipse(0, -42, 10, 14, 0, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 그립 손잡이 살짝 가공
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(0, -6);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        // --- STREAMING_CHUNK: Main rendering function... ---
+        function draw() {
+            // 1. 맑은 하늘 배경 렌더링 (그라데이션 연출)
+            const bgGrad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+            bgGrad.addColorStop(0, '#7dd3fc'); // 깊고 맑은 시안 블루
+            bgGrad.addColorStop(0.7, '#bae6fd'); // 밝고 부드러운 하늘색
+            bgGrad.addColorStop(1, '#e0f2fe'); // 지표면과 맞닿는 하이라이트 하늘색
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
+
+            // 구름 그리기
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+            clouds.forEach(c => {
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, 20 * c.scale, 0, Math.PI * 2);
+                ctx.arc(c.x + 15 * c.scale, c.y - 10 * c.scale, 25 * c.scale, 0, Math.PI * 2);
+                ctx.arc(c.x + 35 * c.scale, c.y, 20 * c.scale, 0, Math.PI * 2);
+                ctx.closePath();
+                ctx.fill();
+            });
+
+            // 2. 경기장 코트 바닥 그리기 (풋풋한 초록색 잔디 및 라인 마킹)
+            ctx.fillStyle = '#22c55e'; // 산뜻한 초록색 바닥
+            ctx.fillRect(0, GROUND_Y, VIEW_WIDTH, VIEW_HEIGHT - GROUND_Y);
+            
+            // 바닥 입체 장식선
+            ctx.fillStyle = '#15803d';
+            ctx.fillRect(0, GROUND_Y, VIEW_WIDTH, 8);
+
+            // 코트 흰색 아웃라인 마킹
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            // 메인 베이스라인
+            ctx.moveTo(20, GROUND_Y + 12);
+            ctx.lineTo(VIEW_WIDTH - 20, GROUND_Y + 12);
+            // 서브 코트 분할선
+            ctx.moveTo(150, GROUND_Y + 12);
+            ctx.lineTo(150, VIEW_HEIGHT - 10);
+            ctx.moveTo(VIEW_WIDTH - 150, GROUND_Y + 12);
+            ctx.lineTo(VIEW_WIDTH - 150, VIEW_HEIGHT - 10);
+            ctx.stroke();
+
+            // 3. 중앙 배드민턴 네트 그리기
+            const netTopY = GROUND_Y - NET_HEIGHT;
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3;
+
+            // 네트 프레임 기둥 기둥 세우기
+            ctx.beginPath();
+            ctx.moveTo(NET_X, GROUND_Y);
+            ctx.lineTo(NET_X, netTopY);
+            ctx.stroke();
+
+            // 네트 격자 무늬 채색
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+            ctx.lineWidth = 1.5;
+            for (let ny = netTopY + 10; ny < GROUND_Y; ny += 8) {
+                ctx.beginPath();
+                ctx.moveTo(NET_X - 12, ny);
+                ctx.lineTo(NET_X + 12, ny);
+                ctx.stroke();
+            }
+            ctx.strokeStyle = '#f1f5f9';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(NET_X - 12, netTopY + 4);
+            ctx.lineTo(NET_X + 12, netTopY + 4);
+            ctx.stroke();
+
+            // 4. 플레이어 A 및 B 그리기
+            drawPlayer(playerA, 'A');
+            drawPlayer(playerB, 'B');
+
+            // 5. 셔틀콕 잔상 꼬리 그리기
+            trailEffect.forEach((t, i) => {
+                ctx.save();
+                ctx.globalAlpha = t.alpha * (i / trailEffect.length);
+                ctx.fillStyle = '#f8fafc';
+                ctx.beginPath();
+                ctx.arc(t.x, t.y, t.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // 6. 배드민턴 셔틀콕 정밀 렌더링
+            ctx.save();
+            ctx.translate(shuttlecock.x, shuttlecock.y);
+            ctx.rotate(shuttlecock.rotation);
+
+            // 셔틀콕 깃털 날개 그리기 (흰색 날개 세 가닥)
+            ctx.fillStyle = '#f1f5f9';
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(-14, -8);
+            ctx.lineTo(-12, 0);
+            ctx.lineTo(-14, 8);
+            ctx.closePath();
+            ctx.fill();
+
+            // 날개 뼈대 선
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(-1, 0);
+            ctx.lineTo(-11, 0);
+            ctx.stroke();
+
+            // 둥글고 단단한 라켓 헤드 타격용 고무/코르크 머리 그리기 (빨간/초록 포인트 띠 장식)
+            ctx.fillStyle = '#ef4444'; // 빨간 가죽 테두리선
+            ctx.beginPath();
+            ctx.arc(2, 0, 5, -Math.PI/2, Math.PI/2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ffffff'; // 주 코르크 헤드
+            ctx.beginPath();
+            ctx.arc(1, 0, 4.5, -Math.PI/2, Math.PI/2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        // --- STREAMING_CHUNK: Looping game state step functions... ---
+        // --- 메인 게임 루프 엔진 구동 ---
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 초기 시작 포지션 배치 후 첫 서브 진행
+        resetServe('A');
+        
+        // 윈도우 로드 완료와 동시에 게임 구동 시작
+        window.onload = function () {
+            gameLoop();
+        };
+
+    </script>
+</body>
+</html>
