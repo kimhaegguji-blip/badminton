@@ -1,11 +1,10 @@
-<!-- STREAMING_CHUNK: Setting up the responsive head and third-party WebRTC PeerJS libraries... -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <!-- 모바일 환경을 고려한 뷰포트 설정 (터치 줌 방지 및 반응형 레이아웃) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Retro Mini Badminton Challenge - PVP Multiplayer Edition</title>
+    <title>Retro Mini Badminton Challenge - Settings & PVP</title>
     <!-- Tailwind CSS 및 Font-Awesome 아이콘 로드 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 실시간 P2P 데이터 연동을 위한 PeerJS 시그널링 공식 CDN 탑재 -->
@@ -18,7 +17,6 @@
             user-select: none;
             -webkit-user-select: none;
         }
-        /* 캔버스 외곽선 부드러운 광원 및 입체적 효과 부여 */
         .game-container {
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
         }
@@ -26,7 +24,6 @@
 </head>
 <body class="bg-slate-900 text-white min-h-screen flex flex-col justify-between items-center overflow-x-hidden p-2 sm:p-4">
 
-    <!-- STREAMING_CHUNK: Building Header with scoreboard and quick controls... -->
     <!-- 상단 헤더 영역 -->
     <header class="w-full max-w-4xl flex justify-between items-center px-4 py-2 bg-slate-800/80 rounded-2xl border border-slate-700/50 backdrop-blur-md mb-2 z-10">
         <div class="flex items-center gap-2">
@@ -35,6 +32,7 @@
                 <div class="flex items-center gap-1.5">
                     <h1 class="text-base sm:text-xl font-black tracking-wider text-amber-400">MINI BADMINTON</h1>
                     <span id="pvpIndicator" class="hidden text-[9px] px-1.5 py-0.5 bg-blue-600 text-white rounded font-bold uppercase tracking-wider">PVP LIVE</span>
+                    <span id="doublesIndicator" class="hidden text-[9px] px-1.5 py-0.5 bg-purple-600 text-white rounded font-bold uppercase tracking-wider">2 VS 2</span>
                 </div>
                 <p class="text-[9px] sm:text-xs text-slate-400">PC: [Z]스매시 [X]클리어 [C]드롭 [Space]드라이브</p>
             </div>
@@ -51,13 +49,20 @@
                 <span id="scoreB" class="text-lg sm:text-2xl font-black text-blue-500">0</span>
             </div>
         </div>
-        <!-- 리스타트 버튼 -->
-        <button id="btnRestart" class="bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-slate-950 text-xs sm:text-sm font-extrabold px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl transition-all shadow-md active:scale-95">
-            RESTART
-        </button>
+        <!-- 우측 컨트롤 버튼 그룹 -->
+        <div class="flex items-center gap-2">
+            <button id="btnFullscreen" class="bg-slate-700 hover:bg-slate-600 text-white text-xs sm:text-sm font-extrabold px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-1" title="전체화면 전환">
+                <span id="fsIcon">🔲</span> <span class="hidden sm:inline">FULL</span>
+            </button>
+            <button id="btnSettings" class="bg-slate-700 hover:bg-slate-600 text-white text-xs sm:text-sm font-extrabold px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-1" title="자막 및 크기 설정">
+                <span>⚙️</span> <span class="hidden sm:inline">SETTING</span>
+            </button>
+            <button id="btnRestart" class="bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-slate-950 text-xs sm:text-sm font-extrabold px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl transition-all shadow-md active:scale-95">
+                RESTART
+            </button>
+        </div>
     </header>
 
-    <!-- STREAMING_CHUNK: Designing Game Viewport and Lobby Screen overlays... -->
     <!-- 게임 뷰포트 영역 -->
     <main class="relative w-full max-w-4xl aspect-[2/1] game-container bg-slate-950 rounded-2xl overflow-hidden border-4 border-slate-700">
         <!-- 메인 게임 캔버스 -->
@@ -65,25 +70,35 @@
 
         <!-- 게임 대기 로비 화면 (시작 화면) -->
         <div id="gameStartModal" class="absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center z-30 transition-all duration-300">
-            <span class="text-6xl sm:text-8xl mb-4 animate-bounce">🏸</span>
-            <h2 class="text-4xl sm:text-6xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500 drop-shadow">배드민턴 게임</h2>
-            <p class="text-slate-300 text-xs sm:text-sm mt-2 mb-8 max-w-lg text-center px-6 leading-relaxed">
-                <span class="text-amber-400 font-bold">PC 기술 조작:</span> [Z] 스매시 ⚡ | [X] 하이클리어 🚀 | [C] 드롭/헤어핀 🎈 | [스페이스] 드라이브 ☄️<br>
-                <span class="text-blue-400 font-bold">모바일 기술 조작:</span> 하단 우측의 전용 기술 패드를 터치하여 원하는 샷을 즉시 구사하세요!<br>
-                <span class="text-emerald-400 font-bold">PVP 매칭 시스템:</span> 혼자서 즐기거나 다른 스마트폰/PC의 친구와 1:1 대전방을 개설해 실시간 멀티플레이를 겨루세요.
-            </p>
+            <span class="text-5xl sm:text-7xl mb-4 animate-bounce">🏸</span>
+            <h2 class="text-4xl sm:text-5xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500 drop-shadow mb-6">배드민턴 게임</h2>
             
-            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center w-full max-w-md px-6">
-                <button id="btnPlayAI" class="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-600 hover:to-teal-500 text-slate-950 font-black text-lg rounded-2xl shadow-lg shadow-emerald-500/20 active:scale-95 transition-all">
-                    🤖 vs AI (싱글 플레이)
-                </button>
-                <button id="btnPlayPVP" class="w-full py-4 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-black text-lg rounded-2xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all">
-                    ⚔️ 친구와 대전 (온라인 PVP)
-                </button>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl px-6">
+                <!-- 싱글 플레이 패널 -->
+                <div class="bg-slate-900 border border-slate-700 p-4 rounded-2xl text-center">
+                    <h3 class="text-emerald-400 font-bold mb-3">🤖 혼자서 AI와 대결 (Single)</h3>
+                    <div class="flex flex-col gap-2">
+                        <button id="btnPlayAI_1v1" class="py-3 bg-slate-800 hover:bg-emerald-600 text-white font-bold rounded-xl active:scale-95 transition-all">
+                            단식 (1 vs 1)
+                        </button>
+                        <button id="btnPlayAI_2v2" class="py-3 bg-slate-800 hover:bg-emerald-600 text-white font-bold rounded-xl active:scale-95 transition-all">
+                            복식 (2 vs 2 팀전)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- PVP 플레이 패널 -->
+                <div class="bg-slate-900 border border-slate-700 p-4 rounded-2xl text-center">
+                    <h3 class="text-blue-400 font-bold mb-3">⚔️ 친구와 온라인 대전 (PVP)</h3>
+                    <div class="flex flex-col gap-2">
+                        <button id="btnPlayPVP" class="py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl active:scale-95 transition-all shadow-lg">
+                            온라인 대전방 입장하기
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- STREAMING_CHUNK: Injecting Interactive PVP Panel overlays... -->
         <!-- PVP 대전방 제어 패널 -->
         <div id="pvpPanel" class="hidden absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center z-40 transition-all duration-300">
             <button id="btnBackToStart" class="absolute top-4 left-4 text-slate-400 hover:text-white text-sm font-bold flex items-center gap-1">
@@ -97,16 +112,21 @@
                     <span class="text-4xl mb-2">🏠</span>
                     <h4 class="text-xl font-extrabold text-white">직접 방 만들기 (Host)</h4>
                     <p class="text-xs text-slate-400 mt-1 mb-4">내가 호스트가 되어 친구를 방에 초대합니다.</p>
-                    <button id="btnCreateRoom" class="w-full py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-black rounded-xl active:scale-95 transition-all">
-                        방 생성하기
-                    </button>
+                    <div class="flex gap-2 w-full">
+                        <button id="btnCreateRoom1v1" class="flex-1 py-2.5 bg-slate-800 hover:bg-blue-600 text-white font-bold rounded-xl active:scale-95 transition-all text-sm">
+                            1:1 방 생성
+                        </button>
+                        <button id="btnCreateRoom2v2" class="flex-1 py-2.5 bg-slate-800 hover:bg-purple-600 text-white font-bold rounded-xl active:scale-95 transition-all text-sm">
+                            2:2 방 생성
+                        </button>
+                    </div>
                 </div>
                 
                 <!-- 참여하기 카드 -->
                 <div class="bg-slate-900 border border-slate-700/60 p-6 rounded-2xl flex flex-col items-center justify-between text-center">
                     <span class="text-4xl mb-2">🚀</span>
                     <h4 class="text-xl font-extrabold text-white">코드 입력해 참가 (Guest)</h4>
-                    <p class="text-xs text-slate-400 mt-1 mb-4">공유받은 방 코드나 주소를 입력하여 입장합니다.</p>
+                    <p class="text-xs text-slate-400 mt-1 mb-4">초대받은 방의 모드(단식/복식)는 자동 적용됩니다.</p>
                     <div class="flex gap-2 w-full mb-3">
                         <input id="inputRoomId" type="text" placeholder="방 코드 6자리 입력" class="flex-1 bg-slate-950 border border-slate-700 px-3 py-2 rounded-xl text-center text-sm font-bold tracking-wider text-amber-400 focus:outline-none focus:border-amber-400">
                         <button id="btnJoinRoom" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl text-sm active:scale-95 transition-all">
@@ -117,14 +137,12 @@
             </div>
         </div>
 
-        <!-- STREAMING_CHUNK: Integrating Lobby Status and Loading spinners... -->
         <!-- PVP 대기 로비 상세 현황 모달 -->
         <div id="pvpLobbyModal" class="hidden absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center z-50">
             <span class="text-5xl animate-spin mb-4">⏳</span>
             <h3 id="lobbyStatusTitle" class="text-2xl font-black text-white mb-2">방을 생성하는 중...</h3>
             <p id="lobbyStatusDesc" class="text-sm text-slate-400 mb-6 text-center max-w-sm px-4">네트워크 매칭 채널을 확보하고 있습니다.</p>
             
-            <!-- 호스트 전용 초대 링크/코드 영역 -->
             <div id="roomCodeArea" class="hidden flex flex-col items-center bg-slate-900 border border-slate-800 p-4 rounded-xl w-full max-w-md mb-6">
                 <span class="text-xs text-slate-400 font-bold mb-1">상대방 초대용 코드</span>
                 <span id="displayRoomId" class="text-3xl font-black text-yellow-400 tracking-widest select-all mb-4">----</span>
@@ -137,19 +155,43 @@
                     </button>
                 </div>
             </div>
-            
             <button id="btnCancelPvp" class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-sm rounded-xl active:scale-95 transition-all">
                 방 나가기
             </button>
         </div>
 
-        <!-- 인게임 점수 알림 & 스매시 오버레이 메시지 -->
-        <div id="gameAnnounce" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none transition-all duration-300 opacity-0 scale-75 z-10">
-            <h2 id="announceText" class="text-3xl sm:text-6xl font-black text-yellow-400 drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] tracking-wider"></h2>
-            <p id="announceSubtext" class="text-sm sm:text-xl text-white mt-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"></p>
+        <!-- 자막 커스텀 설정 모달 -->
+        <div id="settingsModal" class="hidden absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center z-40 transition-all duration-300">
+            <h3 class="text-2xl font-black text-amber-400 mb-6">⚙️ 자막 및 게임 설정</h3>
+            <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-full max-w-sm flex flex-col gap-5 text-sm">
+                <!-- 해설 켜고 끄기 토글 -->
+                <div class="flex justify-between items-center">
+                    <span class="font-bold text-slate-300">해설 자막 표시</span>
+                    <button id="btnToggleAnnounce" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-lg active:scale-95 transition-all">
+                        켜짐 (ON)
+                    </button>
+                </div>
+                <!-- 해설 글씨 크기 설정 -->
+                <div class="flex justify-between items-center">
+                    <span class="font-bold text-slate-300">자막 글씨 크기</span>
+                    <div class="flex gap-1.5">
+                        <button id="btnSizeSmall" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-md active:scale-95 transition-all text-xs border border-slate-700">작게</button>
+                        <button id="btnSizeMedium" class="px-2.5 py-1 bg-blue-600 text-white font-bold rounded-md active:scale-95 transition-all text-xs">보통</button>
+                        <button id="btnSizeLarge" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-md active:scale-95 transition-all text-xs border border-slate-700">크게</button>
+                    </div>
+                </div>
+                <div class="border-t border-slate-800 my-1"></div>
+                <button id="btnCloseSettings" class="w-full py-2.5 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-black rounded-xl active:scale-95 transition-all text-center">
+                    확인 및 닫기
+                </button>
+            </div>
         </div>
 
-        <!-- 게임 오버 / 승리 팝업 -->
+        <div id="gameAnnounce" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none transition-all duration-300 opacity-0 scale-75 z-10">
+            <h2 id="announceText" class="font-black text-yellow-400 drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] tracking-wider text-center"></h2>
+            <p id="announceSubtext" class="text-white mt-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-center"></p>
+        </div>
+
         <div id="gameOverModal" class="absolute inset-0 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center hidden z-20">
             <span class="text-6xl sm:text-8xl animate-bounce mb-2">🏆</span>
             <h2 id="winnerText" class="text-4xl sm:text-6xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500 drop-shadow">PLAYER A WINS!</h2>
@@ -160,34 +202,24 @@
         </div>
     </main>
 
-    <!-- STREAMING_CHUNK: Rendering Mobile Controls pad... -->
     <!-- 모바일 전용 가상 조작 버튼 패널 -->
     <footer class="w-full max-w-4xl grid grid-cols-12 gap-2 mt-2 px-1 pb-2">
-        <!-- 왼쪽: 이동 컨트롤 패드 (5칸) -->
         <div class="col-span-5 flex items-center gap-2">
-            <button id="btnLeft" class="flex-1 aspect-square bg-slate-800/80 active:bg-slate-700 border-b-4 border-slate-950 active:border-b-0 rounded-2xl flex items-center justify-center text-2xl sm:text-3xl shadow-lg active:translate-y-[4px] transition-all" style="-webkit-tap-highlight-color: transparent;">
-                ◀
-            </button>
-            <button id="btnRight" class="flex-1 aspect-square bg-slate-800/80 active:bg-slate-700 border-b-4 border-slate-950 active:border-b-0 rounded-2xl flex items-center justify-center text-2xl sm:text-3xl shadow-lg active:translate-y-[4px] transition-all" style="-webkit-tap-highlight-color: transparent;">
-                ▶
-            </button>
+            <button id="btnLeft" class="flex-1 aspect-square bg-slate-800/80 active:bg-slate-700 border-b-4 border-slate-950 active:border-b-0 rounded-2xl flex items-center justify-center text-2xl sm:text-3xl shadow-lg active:translate-y-[4px] transition-all" style="-webkit-tap-highlight-color: transparent;">◀</button>
+            <button id="btnRight" class="flex-1 aspect-square bg-slate-800/80 active:bg-slate-700 border-b-4 border-slate-950 active:border-b-0 rounded-2xl flex items-center justify-center text-2xl sm:text-3xl shadow-lg active:translate-y-[4px] transition-all" style="-webkit-tap-highlight-color: transparent;">▶</button>
         </div>
-
-        <!-- 중앙: 점프 버튼 (2칸) -->
         <div class="col-span-2 flex items-center">
             <button id="btnJump" class="w-full aspect-square bg-blue-600/80 active:bg-blue-500 border-b-4 border-blue-950 active:border-b-0 rounded-2xl flex flex-col items-center justify-center shadow-lg active:translate-y-[4px] transition-all" style="-webkit-tap-highlight-color: transparent;">
                 <span class="text-xl sm:text-2xl">▲</span>
                 <span class="text-[9px] sm:text-xs font-bold mt-1">JUMP</span>
             </button>
         </div>
-
-        <!-- 오른쪽: 액션 기술 패드 (5칸) - 4가지 전문 기술 지원 -->
         <div class="col-span-5 grid grid-cols-2 gap-1.5">
             <button id="btnSmash" class="py-2.5 bg-red-600 active:bg-red-500 border-b-4 border-red-950 active:border-b-0 rounded-xl flex flex-col items-center justify-center shadow active:translate-y-[2px] transition-all" style="-webkit-tap-highlight-color: transparent;">
                 <span class="text-sm">⚡</span>
                 <span class="text-[9px] font-black">SMASH</span>
             </button>
-            <button id="btnClear" class="py-2.5 bg-indigo-600 active:bg-indigo-500 border-b-4 border-indigo-950 active:border-b-0 rounded-xl flex flex-col items-center justify-center shadow active:translate-y-[2px] transition-all" style="-webkit-tap-highlight-color: transparent;">
+            <button id="btnHit" class="py-2.5 bg-indigo-600 active:bg-indigo-500 border-b-4 border-indigo-950 active:border-b-0 rounded-xl flex flex-col items-center justify-center shadow active:translate-y-[2px] transition-all" style="-webkit-tap-highlight-color: transparent;">
                 <span class="text-sm">🚀</span>
                 <span class="text-[9px] font-black">CLEAR</span>
             </button>
@@ -202,32 +234,23 @@
         </div>
     </footer>
 
-    <!-- STREAMING_CHUNK: Coding synthesized audio and Web Audio API functions... -->
     <script>
-        // --- 사운드 효과음 신시사이저 (Web Audio API) ---
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         let audioCtx = null;
 
         function initAudio() {
-            if (!audioCtx) {
-                audioCtx = new AudioCtx();
-            }
+            if (!audioCtx) audioCtx = new AudioCtx();
         }
 
-        // '팅', '통', '푸슉' 사운드를 신디사이징 기술로 정밀 구현
         function playSoundLocal(type) {
             initAudio();
             if (!audioCtx) return;
-
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
 
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain);
             gain.connect(audioCtx.destination);
-
             const now = audioCtx.currentTime;
 
             if (type === 'ting') {
@@ -237,8 +260,7 @@
                 osc.frequency.exponentialRampToValueAtTime(150, now + 0.12);
                 gain.gain.setValueAtTime(0.35, now);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
-                osc.start(now);
-                osc.stop(now + 0.13);
+                osc.start(now); osc.stop(now + 0.13);
             } else if (type === 'tong') {
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(480, now);
@@ -246,8 +268,7 @@
                 osc.frequency.exponentialRampToValueAtTime(120, now + 0.18);
                 gain.gain.setValueAtTime(0.4, now);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
-                osc.start(now);
-                osc.stop(now + 0.19);
+                osc.start(now); osc.stop(now + 0.19);
             } else if (type === 'phoosh') {
                 osc.type = 'sawtooth';
                 osc.frequency.setValueAtTime(180, now);
@@ -255,152 +276,88 @@
                 osc.frequency.exponentialRampToValueAtTime(60, now + 0.22);
                 gain.gain.setValueAtTime(0.4, now);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
-                osc.start(now);
-                osc.stop(now + 0.23);
+                osc.start(now); osc.stop(now + 0.23);
             } else if (type === 'score') {
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(523.25, now); // C5
-                osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
-                osc.frequency.setValueAtTime(783.99, now + 0.16); // G5
+                osc.frequency.setValueAtTime(523.25, now); 
+                osc.frequency.setValueAtTime(659.25, now + 0.08); 
+                osc.frequency.setValueAtTime(783.99, now + 0.16); 
                 gain.gain.setValueAtTime(0.18, now);
                 gain.gain.linearRampToValueAtTime(0.18, now + 0.2);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
-                osc.start(now);
-                osc.stop(now + 0.35);
+                osc.start(now); osc.stop(now + 0.35);
             } else if (type === 'out') {
                 osc.type = 'sawtooth';
                 osc.frequency.setValueAtTime(240, now);
                 osc.frequency.linearRampToValueAtTime(100, now + 0.25);
                 gain.gain.setValueAtTime(0.18, now);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-                osc.start(now);
-                osc.stop(now + 0.3);
+                osc.start(now); osc.stop(now + 0.3);
             }
         }
 
-        // --- STREAMING_CHUNK: Declaring game variables and P2P multiplay variables... ---
-        // P2P 멀티플레이어 환경 변수들
-        let peer = null;
-        let conn = null;
-        let isPvpMode = false;
-        let isHost = false;
-        let isClient = false;
-        let hasClientConnected = false;
-        let lastReceivedState = null;
+        let peer = null; let conn = null;
+        let isPvpMode = false; let isHost = false; let isClient = false;
+        let hasClientConnected = false; let lastReceivedState = null;
         let soundQueue = [];
 
-        // 클라이언트로부터 받아올 원격 조작 입력 저장소
+        // 복식 모드 플래그
+        let isDoublesMode = false;
+
+        // 해설 자막 개인 설정 제어 변수
+        let announceEnabled = true;
+        let announceSize = 'medium';
+
         let clientInputs = {
             keys: { ArrowLeft: false, ArrowRight: false, ArrowUp: false, Space: false },
             touches: { left: false, right: false, jump: false }
         };
 
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+        const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d');
+        const VIEW_WIDTH = 800; const VIEW_HEIGHT = 400;
+        canvas.width = VIEW_WIDTH; canvas.height = VIEW_HEIGHT;
 
-        // 가상 월드 해상도 고정 (800x400 비율 보존)
-        const VIEW_WIDTH = 800;
-        const VIEW_HEIGHT = 400;
-        canvas.width = VIEW_WIDTH;
-        canvas.height = VIEW_HEIGHT;
+        const GROUND_Y = 340; const GRAVITY = 0.25; const NET_X = VIEW_WIDTH / 2; const NET_HEIGHT = 80; 
+        const COURT_LEFT_BOUND = 80; const COURT_RIGHT_BOUND = 720;
 
-        // 게임 물리 변수들
-        const GROUND_Y = 340; 
-        const GRAVITY = 0.25; 
-        const NET_X = VIEW_WIDTH / 2; 
-        const NET_HEIGHT = 80; 
+        const keys = { ArrowLeft: false, ArrowRight: false, ArrowUp: false, Space: false, KeyZ: false, KeyX: false, KeyC: false };
+        const touches = { left: false, right: false, jump: false, smash: false, clear: false, drop: false, drive: false };
 
-        // 아웃(Out) 판정을 위한 코트 물리적 경계선 범위 (좌측 80, 우측 720)
-        const COURT_LEFT_BOUND = 80;
-        const COURT_RIGHT_BOUND = 720;
-
-        // 키보드 입력 상태 트래킹
-        const keys = {
-            ArrowLeft: false,
-            ArrowRight: false,
-            ArrowUp: false,
-            Space: false,
-            KeyZ: false,
-            KeyX: false,
-            KeyC: false
-        };
-
-        // 모바일 터치 상태 트래킹
-        const touches = {
-            left: false,
-            right: false,
-            jump: false,
-            smash: false,
-            clear: false,
-            drop: false,
-            drive: false
-        };
-
-        // 게임 상태 관리
         let gameState = 'START_SCREEN'; 
-        let scoreA = 0;
-        let scoreB = 0;
-        let lastToucher = null; 
-        let trailEffect = []; 
-        let scoreMessageTimeout = null;
-        let aiServeTimer = 0; 
+        let scoreA = 0; let scoreB = 0; let lastToucher = null; 
+        let trailEffect = []; let scoreMessageTimeout = null; let aiServeTimer = 0; 
 
-        // 구름 이펙트 배경용 데이터
         const clouds = [
-            { x: 100, y: 60, scale: 0.8, speed: 0.1 },
-            { x: 450, y: 40, scale: 1.2, speed: 0.15 },
-            { x: 750, y: 80, scale: 0.6, speed: 0.08 }
+            { x: 100, y: 60, scale: 0.8, speed: 0.1 }, { x: 450, y: 40, scale: 1.2, speed: 0.15 }, { x: 750, y: 80, scale: 0.6, speed: 0.08 }
         ];
 
-        // 1. 플레이어 A 정의 (사용자 - 빨간색)
-        const playerA = {
-            x: 150,
-            y: GROUND_Y - 50,
-            width: 32,
-            height: 50,
-            vx: 0,
-            vy: 0,
-            speed: 4.5,
-            jumpForce: -8,
-            isGrounded: true,
-            color: '#ef4444', 
-            swingTimer: 0,
-            swingDuration: 12,
-            racketAngle: 0,
-            facing: 'right'
+        // 플레이어 4인방 정의 (A1, A2, B1, B2)
+        const playerA1 = {
+            x: 220, y: GROUND_Y - 50, width: 32, height: 50, vx: 0, vy: 0,
+            speed: 4.5, jumpForce: -8, isGrounded: true, color: '#ef4444', 
+            swingTimer: 0, swingDuration: 12, racketAngle: 0, facing: 'right'
         };
 
-        // 2. 플레이어 B 정의 (AI 혹은 원격 플레이어 B - 파란색)
-        const playerB = {
-            x: 650,
-            y: GROUND_Y - 50,
-            width: 32,
-            height: 50,
-            vx: 0,
-            vy: 0,
-            speed: 4.0, 
-            jumpForce: -8,
-            isGrounded: true,
-            color: '#3b82f6', 
-            swingTimer: 0,
-            swingDuration: 12,
-            racketAngle: 0,
-            facing: 'left'
+        const playerA2 = { // 내 파트너 (AI)
+            x: 100, y: GROUND_Y - 50, width: 32, height: 50, vx: 0, vy: 0,
+            speed: 4.0, jumpForce: -8, isGrounded: true, color: '#f97316', 
+            swingTimer: 0, swingDuration: 12, racketAngle: 0, facing: 'right'
         };
 
-        // 3. 셔틀콕 정의
-        const shuttlecock = {
-            x: 200,
-            y: 100,
-            vx: 0,
-            vy: 0,
-            radius: 8,
-            drag: 0.99, 
-            verticalDrag: 0.992, 
-            rotation: 0
+        const playerB1 = { // 상대 전위 (AI 또는 PVP 게스트)
+            x: 550, y: GROUND_Y - 50, width: 32, height: 50, vx: 0, vy: 0,
+            speed: 4.0, jumpForce: -8, isGrounded: true, color: '#3b82f6', 
+            swingTimer: 0, swingDuration: 12, racketAngle: 0, facing: 'left'
         };
 
-        // 4종류의 전문 기술 데이터 정의
+        const playerB2 = { // 상대 후위 파트너 (AI)
+            x: 680, y: GROUND_Y - 50, width: 32, height: 50, vx: 0, vy: 0,
+            speed: 4.0, jumpForce: -8, isGrounded: true, color: '#0ea5e9', 
+            swingTimer: 0, swingDuration: 12, racketAngle: 0, facing: 'left'
+        };
+
+        const shuttlecock = { x: 200, y: 100, vx: 0, vy: 0, radius: 8, drag: 0.99, verticalDrag: 0.992, rotation: 0 };
+
         const techShots = {
             smash: { vx: 20, vy: 3.5, sound: 'ting', name: "⚡ SMASH!", sub: "가파른 각도로 내리꽂히는 공격적인 강속구!" },
             clear: { vx: 12, vy: -12.5, sound: 'tong', name: "🚀 CLEAR!", sub: "코트 가장 뒷공간으로 구석 깊숙이 날아갑니다" },
@@ -408,21 +365,14 @@
             drive: { vx: 16, vy: -1.0, sound: 'ting', name: "☄️ DRIVE!", sub: "낮고 빠른 직선 궤적으로 속도전을 펼칩니다" }
         };
 
-        // --- STREAMING_CHUNK: Integrating sound trigger hooks with Network synchronization... ---
-        // 로컬 오디오 재생과 호스트의 사운드 동기화 큐 전송을 결합한 사운드 랩핑 함수
         function playSound(type) {
             playSoundLocal(type);
-            if (isHost && conn && conn.open) {
-                soundQueue.push(type);
-            }
+            if (isHost && conn && conn.open) soundQueue.push(type);
         }
 
-        // --- STREAMING_CHUNK: Configuring controller events and multi-device inputs... ---
         window.addEventListener('keydown', (e) => {
             initAudio(); 
-            if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space', 'KeyZ', 'KeyX', 'KeyC'].includes(e.code)) {
-                e.preventDefault();
-            }
+            if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space', 'KeyZ', 'KeyX', 'KeyC'].includes(e.code)) e.preventDefault();
             if (e.code === 'ArrowLeft') keys.ArrowLeft = true;
             if (e.code === 'ArrowRight') keys.ArrowRight = true;
             if (e.code === 'ArrowUp') keys.ArrowUp = true;
@@ -441,100 +391,79 @@
 
         function handleTriggerAttack(type) {
             if (isClient) {
-                // 클라이언트 기기일 경우, 호스트에게 행동 패킷(trigger)을 즉시 전송
-                if (conn && conn.open) {
-                    conn.send({
-                        type: 'trigger',
-                        tech: type
-                    });
-                }
+                if (conn && conn.open) conn.send({ type: 'trigger', tech: type });
                 return;
             }
-
             if (gameState === 'SERVING_A') {
                 serve('A', type);
             } else if (gameState === 'PLAYING') {
-                if (playerA.swingTimer === 0) {
-                    playerA.swingTimer = playerA.swingDuration;
-                    checkRacketHit(playerA, 'A', type);
+                if (playerA1.swingTimer === 0) {
+                    playerA1.swingTimer = playerA1.swingDuration;
+                    checkRacketHit(playerA1, 'A', type);
                 }
             }
         }
 
-        // 모바일 가상 패드 바인딩
         const configureTouchBtn = (id, targetState) => {
             const btn = document.getElementById(id);
             btn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                initAudio();
-                touches[targetState] = true;
-                
+                e.preventDefault(); initAudio(); touches[targetState] = true;
                 if (targetState === 'jump') {
-                    if (isClient) {
-                        // 클라이언트의 점프 입력 전송
-                        sendClientInputs();
-                    } else if (playerA.isGrounded && gameState === 'PLAYING') {
-                        playerA.vy = playerA.jumpForce;
-                        playerA.isGrounded = false;
-                    }
+                    if (isClient) sendClientInputs();
+                    else if (playerA1.isGrounded && gameState === 'PLAYING') { playerA1.vy = playerA1.jumpForce; playerA1.isGrounded = false; }
                 }
-                if (targetState === 'smash')  handleTriggerAttack('smash');
-                if (targetState === 'clear')  handleTriggerAttack('clear');
-                if (targetState === 'drop')   handleTriggerAttack('drop');
-                if (targetState === 'drive')  handleTriggerAttack('drive');
+                if (targetState === 'smash') handleTriggerAttack('smash');
+                if (targetState === 'clear') handleTriggerAttack('clear');
+                if (targetState === 'drop') handleTriggerAttack('drop');
+                if (targetState === 'drive') handleTriggerAttack('drive');
             });
             btn.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                touches[targetState] = false;
+                e.preventDefault(); touches[targetState] = false;
                 if (isClient) sendClientInputs();
             });
         };
 
-        configureTouchBtn('btnLeft', 'left');
-        configureTouchBtn('btnRight', 'right');
-        configureTouchBtn('btnJump', 'jump');
-        configureTouchBtn('btnSmash', 'smash');
-        configureTouchBtn('btnClear', 'clear');
-        configureTouchBtn('btnDrop', 'drop');
-        configureTouchBtn('btnDrive', 'drive');
+        configureTouchBtn('btnLeft', 'left'); configureTouchBtn('btnRight', 'right'); configureTouchBtn('btnJump', 'jump');
+        configureTouchBtn('btnSmash', 'smash'); configureTouchBtn('btnHit', 'clear'); configureTouchBtn('btnDrop', 'drop'); configureTouchBtn('btnDrive', 'drive');
 
-        // 싱글플레이 모드 시작 버튼
-        document.getElementById('btnPlayAI').addEventListener('click', () => {
+        // 게임 시작 모드 설정 공통 로직
+        function prepareGameStart(isPvp, isDbl) {
             initAudio();
-            isPvpMode = false;
-            document.getElementById('pvpIndicator').classList.add('hidden');
-            document.getElementById('gameStartModal').classList.add('hidden');
-            document.getElementById('labelA').innerText = "PLAYER A (나)";
-            document.getElementById('labelB').innerText = "PLAYER B (AI)";
-            scoreA = 0;
-            scoreB = 0;
-            updateScoreDisplay();
-            resetServe('A');
-        });
+            isPvpMode = isPvp;
+            isDoublesMode = isDbl;
+            
+            if (isPvp) {
+                document.getElementById('pvpIndicator').classList.remove('hidden');
+                document.getElementById('pvpIndicator').innerText = isHost ? "PVP HOST" : "PVP GUEST";
+            } else {
+                document.getElementById('pvpIndicator').classList.add('hidden');
+                document.getElementById('gameStartModal').classList.add('hidden');
+                document.getElementById('labelA').innerText = isDbl ? "RED TEAM (나+COM)" : "RED TEAM (나)";
+                document.getElementById('labelB').innerText = isDbl ? "BLUE TEAM (AIx2)" : "BLUE TEAM (AI)";
+                scoreA = 0; scoreB = 0;
+                updateScoreDisplay();
+                resetServe('A');
+            }
 
-        // 멀티플레이어 PVP 제어 패널 열기
+            if (isDbl) document.getElementById('doublesIndicator').classList.remove('hidden');
+            else document.getElementById('doublesIndicator').classList.add('hidden');
+        }
+
+        document.getElementById('btnPlayAI_1v1').addEventListener('click', () => prepareGameStart(false, false));
+        document.getElementById('btnPlayAI_2v2').addEventListener('click', () => prepareGameStart(false, true));
+
         document.getElementById('btnPlayPVP').addEventListener('click', () => {
-            initAudio();
-            document.getElementById('pvpPanel').classList.remove('hidden');
+            initAudio(); document.getElementById('pvpPanel').classList.remove('hidden');
         });
 
-        document.getElementById('btnBackToStart').addEventListener('click', () => {
-            document.getElementById('pvpPanel').classList.add('hidden');
-        });
+        document.getElementById('btnBackToStart').addEventListener('click', () => document.getElementById('pvpPanel').classList.add('hidden'));
 
-        // --- STREAMING_CHUNK: Coding PeerJS initialization and Host Room creation... ---
-        // PVP 호스트 방 생성하기
-        document.getElementById('btnCreateRoom').addEventListener('click', () => {
+        function createHostRoom(isDbl) {
             initAudio();
-            isPvpMode = true;
-            isHost = true;
-            isClient = false;
-            document.getElementById('pvpIndicator').classList.remove('hidden');
-            document.getElementById('pvpIndicator').innerText = "PVP HOST";
-
+            isHost = true; isClient = false;
+            prepareGameStart(true, isDbl);
             showLobbyStatus("방 코드 생성하는 중...", "매칭 네트워크 서버에 대기 구역을 생성하고 있습니다.");
             
-            // 6자리 임의 숫자방 ID 생성 (가독성 향상)
             const randomCode = Math.floor(100000 + Math.random() * 900000);
             peer = new Peer('badminton-' + randomCode);
 
@@ -546,57 +475,30 @@
                 document.getElementById('displayRoomId').innerText = cleanCode;
             });
 
-            peer.on('connection', (connection) => {
-                conn = connection;
-                setupConnectionListeners();
-            });
-
-            peer.on('error', (err) => {
-                console.error("PeerJS Error:", err);
-                triggerAnnounce("⚠️ 네트워크 오류", "연결에 실패했습니다. 다시 개설해 주세요.");
-                cleanupConnection();
-            });
-        });
-
-        // --- STREAMING_CHUNK: Coding Guest JoinRoom logic and auto join link... ---
-        // PVP 게스트가 호스트 코드로 직접 참가하기
-        document.getElementById('btnJoinRoom').addEventListener('click', () => {
-            const codeInput = document.getElementById('inputRoomId').value.trim();
-            if (!codeInput || codeInput.length < 5) {
-                triggerAnnounce("⚠️ 코드 불완전", "올바른 6자리 방 코드를 입력하세요.");
-                return;
-            }
-            initAudio();
-            connectToHost(codeInput);
-        });
-
-        // 호스트 연결 시도 함수 (링크 및 코드 겸용)
-        function connectToHost(roomCode) {
-            isPvpMode = true;
-            isHost = false;
-            isClient = true;
-            document.getElementById('pvpIndicator').classList.remove('hidden');
-            document.getElementById('pvpIndicator').innerText = "PVP GUEST";
-
-            showLobbyStatus("친구의 방에 연결하는 중...", "호스트의 기기와 실시간 채널을 동기화하고 있습니다.");
-
-            // 게스트 전용 난수 피어 ID 생성
-            const guestRand = Math.floor(Math.random() * 99999);
-            peer = new Peer('guest-' + guestRand);
-
-            peer.on('open', () => {
-                conn = peer.connect('badminton-' + roomCode);
-                setupConnectionListeners();
-            });
-
-            peer.on('error', (err) => {
-                console.error("PeerJS Guest Error:", err);
-                triggerAnnounce("⚠️ 연결 실패", "방 코드가 틀렸거나 호스트가 접속을 종료했습니다.");
-                cleanupConnection();
-            });
+            peer.on('connection', (connection) => { conn = connection; setupConnectionListeners(); });
+            peer.on('error', (err) => { triggerAnnounce("⚠️ 네트워크 오류", "연결에 실패했습니다."); cleanupConnection(); });
         }
 
-        // 로비 현황 제어 함수
+        document.getElementById('btnCreateRoom1v1').addEventListener('click', () => createHostRoom(false));
+        document.getElementById('btnCreateRoom2v2').addEventListener('click', () => createHostRoom(true));
+
+        document.getElementById('btnJoinRoom').addEventListener('click', () => {
+            const codeInput = document.getElementById('inputRoomId').value.trim();
+            if (!codeInput || codeInput.length < 5) { triggerAnnounce("⚠️ 코드 오류", "올바른 6자리 방 코드를 입력하세요."); return; }
+            initAudio(); connectToHost(codeInput);
+        });
+
+        function connectToHost(roomCode) {
+            isHost = false; isClient = true;
+            prepareGameStart(true, false); 
+            showLobbyStatus("친구의 방에 연결하는 중...", "호스트의 기기와 실시간 채널을 동기화하고 있습니다.");
+
+            const guestRand = Math.floor(Math.random() * 99999);
+            peer = new Peer('guest-' + guestRand);
+            peer.on('open', () => { conn = peer.connect('badminton-' + roomCode); setupConnectionListeners(); });
+            peer.on('error', (err) => { triggerAnnounce("⚠️ 연결 실패", "방 코드가 틀렸거나 호스트가 종료했습니다."); cleanupConnection(); });
+        }
+
         function showLobbyStatus(title, desc) {
             document.getElementById('pvpLobbyModal').classList.remove('hidden');
             document.getElementById('lobbyStatusTitle').innerText = title;
@@ -604,134 +506,126 @@
             document.getElementById('roomCodeArea').classList.add('hidden');
         }
 
-        // --- STREAMING_CHUNK: Coding WebRTC Data channel connection events... ---
-        // 웹RTC 데이터 커넥션 이벤트 바인딩
         function setupConnectionListeners() {
             conn.on('open', () => {
                 hasClientConnected = true;
-                // 모달 및 패널 숨기고 본 게임 랠리 시작
                 document.getElementById('pvpLobbyModal').classList.add('hidden');
                 document.getElementById('pvpPanel').classList.add('hidden');
                 document.getElementById('gameStartModal').classList.add('hidden');
 
                 if (isHost) {
-                    document.getElementById('labelA').innerText = "PLAYER A (호스트)";
-                    document.getElementById('labelB').innerText = "PLAYER B (GUEST)";
+                    document.getElementById('labelA').innerText = isDoublesMode ? "RED TEAM (Host+COM)" : "PLAYER A (호스트)";
+                    document.getElementById('labelB').innerText = isDoublesMode ? "BLUE TEAM (Guest+COM)" : "PLAYER B (GUEST)";
                     triggerAnnounce("⚔️ PVP 대전 개막", "게스트 접속 성공! 경기를 시작합니다.");
-                    scoreA = 0;
-                    scoreB = 0;
-                    updateScoreDisplay();
-                    resetServe('A');
+                    scoreA = 0; scoreB = 0; updateScoreDisplay(); resetServe('A');
                 } else {
-                    document.getElementById('labelA').innerText = "PLAYER A (HOST)";
-                    document.getElementById('labelB').innerText = "PLAYER B (게스트)";
-                    triggerAnnounce("⚔️ PVP 대전 참여", "호스트 코트 접속 성공! 행운을 빕니다!");
+                    document.getElementById('labelA').innerText = "RED TEAM (HOST)";
+                    document.getElementById('labelB').innerText = "BLUE TEAM (게스트)";
+                    triggerAnnounce("⚔️ PVP 대전 참여", "호스트 코트 접속 성공!");
                 }
             });
 
             conn.on('data', (data) => {
                 if (isHost) {
-                    // 호스트가 클라이언트로부터 키/터치 제어 입력을 받았을 때
                     if (data.type === 'inputs') {
-                        clientInputs.keys = data.keys;
-                        clientInputs.touches = data.touches;
+                        clientInputs.keys = data.keys; clientInputs.touches = data.touches;
                     } else if (data.type === 'trigger') {
-                        const techType = data.tech;
-                        if (gameState === 'SERVING_B') {
-                            serve('B', techType);
-                        } else if (gameState === 'PLAYING') {
-                            if (playerB.swingTimer === 0) {
-                                playerB.swingTimer = playerB.swingDuration;
-                                checkRacketHit(playerB, 'B', techType);
+                        if (gameState === 'SERVING_B') serve('B', data.tech);
+                        else if (gameState === 'PLAYING') {
+                            if (playerB1.swingTimer === 0) {
+                                playerB1.swingTimer = playerB1.swingDuration;
+                                checkRacketHit(playerB1, 'B', data.tech);
                             }
                         }
                     }
                 } else if (isClient) {
-                    // 클라이언트가 호스트로부터 60fps 전체 렌더링 동형(state)을 받았을 때
                     if (data.type === 'state') {
                         lastReceivedState = data;
                     }
                 }
             });
 
-            conn.on('close', () => {
-                triggerAnnounce("🔌 대전 종료", "상대방과의 멀티플레이 연결이 끊어졌습니다.");
-                cleanupConnection();
-            });
-
-            conn.on('error', (err) => {
-                console.error("Connection Error:", err);
-                cleanupConnection();
-            });
+            conn.on('close', () => { triggerAnnounce("🔌 연결 해제", "상대방과 연결이 끊어졌습니다."); cleanupConnection(); });
+            conn.on('error', () => { cleanupConnection(); });
         }
 
-        // --- STREAMING_CHUNK: Creating Clipboard sharing for invitation codes... ---
-        // 주소 링크 복사 기능 (클립보드 API 대체)
         function copyTextToClipboard(text, successMsg) {
             const tempInput = document.createElement("textarea");
             tempInput.value = text;
             document.body.appendChild(tempInput);
             tempInput.select();
-            try {
-                document.execCommand("copy");
-                triggerAnnounce("📋 복사 완료!", successMsg);
-            } catch (err) {
-                console.error("복사 오류:", err);
-            }
+            try { document.execCommand("copy"); triggerAnnounce("📋 복사 완료", successMsg); } catch (err) {}
             document.body.removeChild(tempInput);
         }
 
         document.getElementById('btnCopyCode').addEventListener('click', () => {
             const roomCode = document.getElementById('displayRoomId').innerText;
-            copyTextToClipboard(roomCode, "방 입장코드 6자리가 복사되었습니다.");
+            copyTextToClipboard(roomCode, "방 코드 6자리가 복사되었습니다.");
         });
 
         document.getElementById('btnCopyLink').addEventListener('click', () => {
             const roomCode = document.getElementById('displayRoomId').innerText;
             const inviteUrl = window.location.origin + window.location.pathname + '?room=' + roomCode;
-            copyTextToClipboard(inviteUrl, "초대 링크가 복사되었습니다. 친구에게 전송하세요!");
+            copyTextToClipboard(inviteUrl, "초대 링크가 복사되었습니다.");
         });
 
-        // 로비 중도 탈출 시 소켓 연결 해제
         document.getElementById('btnCancelPvp').addEventListener('click', cleanupConnection);
-        document.getElementById('btnBackToStart').addEventListener('click', cleanupConnection);
 
         function cleanupConnection() {
-            if (conn) {
-                conn.close();
-                conn = null;
-            }
-            if (peer) {
-                peer.destroy();
-                peer = null;
-            }
-            isHost = false;
-            isClient = false;
-            isPvpMode = false;
-            hasClientConnected = false;
-            lastReceivedState = null;
+            if (conn) { conn.close(); conn = null; }
+            if (peer) { peer.destroy(); peer = null; }
+            isHost = false; isClient = false; isPvpMode = false; hasClientConnected = false; lastReceivedState = null;
             gameState = 'START_SCREEN';
-            
-            // UI 복구
             document.getElementById('pvpIndicator').classList.add('hidden');
             document.getElementById('pvpLobbyModal').classList.add('hidden');
             document.getElementById('pvpPanel').classList.add('hidden');
             document.getElementById('gameStartModal').classList.remove('hidden');
-            document.getElementById('labelA').innerText = "PLAYER A (나)";
-            document.getElementById('labelB').innerText = "PLAYER B (AI)";
         }
 
-        // --- STREAMING_CHUNK: Coding Racket hit logic with exact physics... ---
+        const handleRestart = () => {
+            scoreA = 0; scoreB = 0; updateScoreDisplay();
+            document.getElementById('gameOverModal').classList.add('hidden');
+            resetServe('A');
+        };
+
+        document.getElementById('btnRestart').addEventListener('click', handleRestart);
+        document.getElementById('btnModalRestart').addEventListener('click', handleRestart);
+
+        // 전체 화면 구현부
+        const btnFullscreen = document.getElementById('btnFullscreen');
+        const fsIcon = document.getElementById('fsIcon');
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                const docElm = document.documentElement;
+                if (docElm.requestFullscreen) docElm.requestFullscreen();
+                else if (docElm.webkitRequestFullscreen) docElm.webkitRequestFullscreen();
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+            }
+        }
+
+        btnFullscreen.addEventListener('click', () => {
+            initAudio(); 
+            toggleFullscreen();
+        });
+
+        function updateFsIcon() {
+            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                fsIcon.innerText = "🔲"; 
+            } else {
+                fsIcon.innerText = "🔳"; 
+            }
+        }
+
+        document.addEventListener('fullscreenchange', updateFsIcon);
+        document.addEventListener('webkitfullscreenchange', updateFsIcon);
+
         function checkRacketHit(player, sender, techType = 'drive') {
             playSound('phoosh');
-
-            const reach = 60;
-            const px = player.x + player.width / 2;
-            const py = player.y + player.height / 2;
-
-            const dx = shuttlecock.x - px;
-            const dy = shuttlecock.y - py;
-            const dist = Math.sqrt(dx * dx + dy * dy);
+            const reach = 60; const px = player.x + player.width / 2; const py = player.y + player.height / 2;
+            const dist = Math.sqrt((shuttlecock.x - px)**2 + (shuttlecock.y - py)**2);
 
             if (dist < reach) {
                 lastToucher = sender;
@@ -745,822 +639,428 @@
                     shuttlecock.vx = -shot.vx + movementBonus + (Math.random() - 0.5) * 1.2;
                     shuttlecock.vy = shot.vy + (Math.random() - 0.5) * 1.2;
                 }
-
-                playSound(shot.sound);
-                triggerAnnounce(shot.name, shot.sub);
-
-                for (let i = 0; i < 5; i++) {
-                    trailEffect.push({
-                        x: shuttlecock.x,
-                        y: shuttlecock.y,
-                        alpha: 0.8,
-                        size: 6
-                    });
-                }
+                playSound(shot.sound); triggerAnnounce(shot.name, shot.sub);
+                for (let i = 0; i < 5; i++) trailEffect.push({ x: shuttlecock.x, y: shuttlecock.y, alpha: 0.8, size: 6 });
             }
         }
 
-        // --- STREAMING_CHUNK: Managing serve logic and tech parameters... ---
-        function triggerAnnounce(mainText, subText) {
-            const container = document.getElementById('gameAnnounce');
+        // 설정값에 따라 자막 크기 클래스 조율
+        function applyAnnounceSize() {
             const main = document.getElementById('announceText');
             const sub = document.getElementById('announceSubtext');
+            
+            main.className = "font-black text-yellow-400 drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] tracking-wider text-center transition-all";
+            sub.className = "text-white mt-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-center transition-all";
+            
+            if (announceSize === 'small') {
+                main.classList.add('text-lg', 'sm:text-2xl');
+                sub.classList.add('text-[10px]', 'sm:text-xs');
+            } else if (announceSize === 'medium') {
+                main.classList.add('text-3xl', 'sm:text-5xl');
+                sub.classList.add('text-xs', 'sm:text-lg');
+            } else if (announceSize === 'large') {
+                main.classList.add('text-5xl', 'sm:text-7xl');
+                sub.classList.add('text-sm', 'sm:text-xl');
+            }
+        }
 
-            main.innerText = mainText;
-            sub.innerText = subText;
+        function triggerAnnounce(mainText, subText) {
+            // 자막 비활성화 상태인 경우 표시하지 않음
+            if (!announceEnabled) return;
 
-            container.classList.remove('opacity-0', 'scale-75');
-            container.classList.add('opacity-100', 'scale-100');
+            applyAnnounceSize();
 
+            const container = document.getElementById('gameAnnounce');
+            document.getElementById('announceText').innerText = mainText;
+            document.getElementById('announceSubtext').innerText = subText;
+            container.classList.remove('opacity-0', 'scale-75'); container.classList.add('opacity-100', 'scale-100');
             if (scoreMessageTimeout) clearTimeout(scoreMessageTimeout);
             scoreMessageTimeout = setTimeout(() => {
-                container.classList.remove('opacity-100', 'scale-100');
-                container.classList.add('opacity-0', 'scale-75');
+                container.classList.remove('opacity-100', 'scale-100'); container.classList.add('opacity-0', 'scale-75');
             }, 1200);
         }
 
         function serve(server, techType = 'drive') {
-            playSound('ting');
-            gameState = 'PLAYING';
-            aiServeTimer = 0;
-
-            // 서브 시에는 스매시 등 하향 기술을 쓰더라도 바닥에 바로 꽂히지 않고,
-            // 기술의 강도 테마를 유지한 채 항상 상향으로 아름답게 솟구치도록 보정 궤적 적용
-            let serveVx = 11;
-            let serveVy = -5.5;
-
-            if (techType === 'smash') {
-                serveVx = 13; 
-                serveVy = -4.5;
-            } else if (techType === 'clear') {
-                serveVx = 8.5; 
-                serveVy = -10;
-            } else if (techType === 'drop') {
-                serveVx = 6.5; 
-                serveVy = -4.5;
-            }
+            playSound('ting'); gameState = 'PLAYING'; aiServeTimer = 0;
+            let serveVx = 11; let serveVy = -5.5;
+            if (techType === 'smash') { serveVx = 13; serveVy = -4.5; } 
+            else if (techType === 'clear') { serveVx = 8.5; serveVy = -10; } 
+            else if (techType === 'drop') { serveVx = 6.5; serveVy = -4.5; }
 
             if (server === 'A') {
-                shuttlecock.vx = serveVx;
-                shuttlecock.vy = serveVy;
-                lastToucher = 'A';
-                triggerAnnounce("⚡ SERVE!", "플레이어 A의 기술 서브 시작!");
+                shuttlecock.vx = serveVx; shuttlecock.vy = serveVy; lastToucher = 'A';
+                triggerAnnounce("⚡ SERVE!", "RED TEAM 서브 발사!");
             } else {
-                shuttlecock.vx = -serveVx;
-                shuttlecock.vy = serveVy;
-                lastToucher = 'B';
-                triggerAnnounce("☄️ SERVE!", "플레이어 B의 기술 서브 시작!");
+                shuttlecock.vx = -serveVx; shuttlecock.vy = serveVy; lastToucher = 'B';
+                triggerAnnounce("☄️ SERVE!", "BLUE TEAM 서브 발사!");
             }
         }
 
         function resetServe(winner) {
-            lastToucher = null;
-            trailEffect = [];
+            lastToucher = null; trailEffect = [];
 
-            playerA.x = 150;
-            playerA.y = GROUND_Y - playerA.height;
-            playerA.vx = 0;
-            playerA.vy = 0;
-            playerA.isGrounded = true; 
-            playerA.swingTimer = 0;
-
-            playerB.x = 650;
-            playerB.y = GROUND_Y - playerB.height;
-            playerB.vx = 0;
-            playerB.vy = 0;
-            playerB.isGrounded = true; 
-            playerB.swingTimer = 0;
+            playerA1.x = 200; playerA1.y = GROUND_Y - playerA1.height; playerA1.vx = 0; playerA1.vy = 0; playerA1.isGrounded = true; playerA1.swingTimer = 0;
+            playerB1.x = 580; playerB1.y = GROUND_Y - playerB1.height; playerB1.vx = 0; playerB1.vy = 0; playerB1.isGrounded = true; playerB1.swingTimer = 0;
+            
+            if (isDoublesMode) {
+                playerA2.x = 90; playerA2.y = GROUND_Y - playerA2.height; playerA2.vx = 0; playerA2.vy = 0; playerA2.isGrounded = true; playerA2.swingTimer = 0;
+                playerB2.x = 690; playerB2.y = GROUND_Y - playerB2.height; playerB2.vx = 0; playerB2.vy = 0; playerB2.isGrounded = true; playerB2.swingTimer = 0;
+            }
 
             if (winner === 'A') {
-                gameState = 'SERVING_A';
-                shuttlecock.x = playerA.x + playerA.width + 5;
-                shuttlecock.y = playerA.y + 15;
+                gameState = 'SERVING_A'; shuttlecock.x = playerA1.x + playerA1.width + 5; shuttlecock.y = playerA1.y + 15;
             } else {
-                gameState = 'SERVING_B';
-                shuttlecock.x = playerB.x - 5;
-                shuttlecock.y = playerB.y + 15;
-                aiServeTimer = 60; 
+                gameState = 'SERVING_B'; shuttlecock.x = playerB1.x - 5; shuttlecock.y = playerB1.y + 15; aiServeTimer = 60; 
             }
-            shuttlecock.vx = 0;
-            shuttlecock.vy = 0;
+            shuttlecock.vx = 0; shuttlecock.vy = 0;
         }
 
-        // --- STREAMING_CHUNK: Evaluating points rules and court bound lines... ---
         function checkPointsAndRules() {
-            // PVP 게스트는 직접 물리 점수 판정을 하지 않고, 호스트 패킷을 기다림
             if (isClient) return;
 
-            // 1. 네트 충돌 판정
             const netTopY = GROUND_Y - NET_HEIGHT;
-            if (shuttlecock.x + shuttlecock.radius >= NET_X - 3 && shuttlecock.x - shuttlecock.radius <= NET_X + 3) {
-                if (shuttlecock.y >= netTopY) {
-                    playSound('out');
-                    shuttlecock.vx = -shuttlecock.vx * 0.4; 
-                    
-                    if (lastToucher === 'A') {
-                        scoreB++;
-                        triggerAnnounce("NET CATCH! 🔴", "플레이어 A의 타구 네트 걸림! B 득점!");
-                        updateScoreDisplay();
-                        if (!checkGameOver()) resetServe('B');
-                    } else if (lastToucher === 'B') {
-                        scoreA++;
-                        triggerAnnounce("NET CATCH! 🔵", "플레이어 B의 타구 네트 걸림! A 득점!");
-                        updateScoreDisplay();
-                        if (!checkGameOver()) resetServe('A');
-                    } else {
-                        if (shuttlecock.x < NET_X) {
-                            scoreB++;
-                            updateScoreDisplay();
-                            if (!checkGameOver()) resetServe('B');
-                        } else {
-                            scoreA++;
-                            updateScoreDisplay();
-                            if (!checkGameOver()) resetServe('A');
-                        }
-                    }
-                    return;
-                }
+            if (shuttlecock.x + shuttlecock.radius >= NET_X - 3 && shuttlecock.x - shuttlecock.radius <= NET_X + 3 && shuttlecock.y >= netTopY) {
+                playSound('out'); shuttlecock.vx = -shuttlecock.vx * 0.4; 
+                if (lastToucher === 'A') { scoreB++; triggerAnnounce("NET CATCH! 🔴", "RED TEAM 네트 걸림! BLUE 득점!"); updateScoreDisplay(); if (!checkGameOver()) resetServe('B'); }
+                else if (lastToucher === 'B') { scoreA++; triggerAnnounce("NET CATCH! 🔵", "BLUE TEAM 네트 걸림! RED 득점!"); updateScoreDisplay(); if (!checkGameOver()) resetServe('A'); }
+                else { if (shuttlecock.x < NET_X) { scoreB++; updateScoreDisplay(); if (!checkGameOver()) resetServe('B'); } else { scoreA++; updateScoreDisplay(); if (!checkGameOver()) resetServe('A'); } }
+                return;
             }
 
-            // 2. 바닥 착지 판정 (여기에 완벽하고 일관된 점수 계산 로직 매핑 구현)
             if (shuttlecock.y + shuttlecock.radius >= GROUND_Y) {
                 shuttlecock.y = GROUND_Y - shuttlecock.radius;
                 const landX = shuttlecock.x;
-                
                 const landSide = landX < NET_X ? 'A' : 'B';
                 const isInBounds = (landSide === 'A' && landX >= COURT_LEFT_BOUND) || (landSide === 'B' && landX <= COURT_RIGHT_BOUND);
 
                 if (landSide === 'A') {
                     if (isInBounds) {
-                        if (lastToucher === 'B') {
-                            scoreB++;
-                            playSound('out');
-                            triggerAnnounce("IN! 🔵", "B의 정교한 인바운드 공격 성공!");
-                            updateScoreDisplay();
-                            if (!checkGameOver()) resetServe('B');
-                        } else {
-                            scoreB++;
-                            playSound('out');
-                            triggerAnnounce("실책! 🔴", "플레이어 A의 타구 자가 진영 낙하!");
-                            updateScoreDisplay();
-                            if (!checkGameOver()) resetServe('B');
-                        }
+                        if (lastToucher === 'B') { scoreB++; playSound('out'); triggerAnnounce("IN! 🔵", "BLUE TEAM 인바운드 공격 성공!"); updateScoreDisplay(); if (!checkGameOver()) resetServe('B'); } 
+                        else { scoreB++; playSound('out'); triggerAnnounce("실책! 🔴", "RED TEAM 자가 진영 낙하!"); updateScoreDisplay(); if (!checkGameOver()) resetServe('B'); }
                     } else {
-                        if (lastToucher === 'B') {
-                            scoreA++;
-                            playSound('score');
-                            triggerAnnounce("OUT! 🟢", "B의 타구 라인 아웃! 플레이어 A 득점!");
-                            updateScoreDisplay();
-                            if (!checkGameOver()) resetServe('A');
-                        } else {
-                            scoreB++;
-                            playSound('out');
-                            triggerAnnounce("OUT! 🔴", "플레이어 A의 아웃! B 득점!");
-                            updateScoreDisplay();
-                            if (!checkGameOver()) resetServe('B');
-                        }
+                        if (lastToucher === 'B') { scoreA++; playSound('score'); triggerAnnounce("OUT! 🟢", "BLUE TEAM 라인 아웃! RED 득점!"); updateScoreDisplay(); if (!checkGameOver()) resetServe('A'); } 
+                        else { scoreB++; playSound('out'); triggerAnnounce("OUT! 🔴", "RED TEAM 아웃! BLUE 득점!"); updateScoreDisplay(); if (!checkGameOver()) resetServe('B'); }
                     }
                 } else {
                     if (isInBounds) {
-                        if (lastToucher === 'A') {
-                            scoreA++;
-                            playSound('score');
-                            triggerAnnounce("IN! 🔴", "플레이어 A의 강공 인바운드 성공!");
-                            updateScoreDisplay();
-                            if (!checkGameOver()) resetServe('A');
-                        } else {
-                            scoreA++;
-                            playSound('score');
-                            triggerAnnounce("실책! 🔵", "B의 타구 자가 진영 낙하!");
-                            updateScoreDisplay();
-                            if (!checkGameOver()) resetServe('A');
-                        }
+                        if (lastToucher === 'A') { scoreA++; playSound('score'); triggerAnnounce("IN! 🔴", "RED TEAM 인바운드 성공!"); updateScoreDisplay(); if (!checkGameOver()) resetServe('A'); } 
+                        else { scoreA++; playSound('score'); triggerAnnounce("실책! 🔵", "BLUE TEAM 자가 진영 낙하!"); updateScoreDisplay(); if (!checkGameOver()) resetServe('A'); }
                     } else {
-                        if (lastToucher === 'A') {
-                            scoreB++;
-                            playSound('out');
-                            triggerAnnounce("OUT! 🔴", "플레이어 A의 타구 아웃! B 득점!");
-                            updateScoreDisplay();
-                            if (!checkGameOver()) resetServe('B');
-                        } else {
-                            scoreA++;
-                            playSound('score');
-                            triggerAnnounce("OUT! 🟢", "B의 타구 아웃! 플레이어 A 득점!");
-                            updateScoreDisplay();
-                            if (!checkGameOver()) resetServe('A');
-                        }
+                        if (lastToucher === 'A') { scoreB++; playSound('out'); triggerAnnounce("OUT! 🔴", "RED TEAM 아웃! BLUE 득점!"); updateScoreDisplay(); if (!checkGameOver()) resetServe('B'); } 
+                        else { scoreA++; playSound('score'); triggerAnnounce("OUT! 🟢", "BLUE TEAM 아웃! RED 득점!"); updateScoreDisplay(); if (!checkGameOver()) resetServe('A'); }
                     }
                 }
             }
         }
 
-        function updateScoreDisplay() {
-            document.getElementById('scoreA').innerText = scoreA;
-            document.getElementById('scoreB').innerText = scoreB;
-        }
+        function updateScoreDisplay() { document.getElementById('scoreA').innerText = scoreA; document.getElementById('scoreB').innerText = scoreB; }
 
         function checkGameOver() {
-            if (scoreA >= 11) {
+            if (scoreA >= 11 || scoreB >= 11) {
                 gameState = 'GAME_OVER';
-                const labelA = document.getElementById('labelA').innerText;
-                document.getElementById('winnerText').innerText = `${labelA} 승리!`;
-                document.getElementById('winnerText').className = "text-3xl sm:text-5xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-yellow-400 to-amber-500 drop-shadow";
-                document.getElementById('gameOverModal').classList.remove('hidden');
-                return true;
-            } else if (scoreB >= 11) {
-                gameState = 'GAME_OVER';
-                const labelB = document.getElementById('labelB').innerText;
-                document.getElementById('winnerText').innerText = `${labelB} 승리!`;
-                document.getElementById('winnerText').className = "text-3xl sm:text-5xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-purple-400 to-indigo-500 drop-shadow";
+                const isRed = scoreA >= 11;
+                const label = isRed ? document.getElementById('labelA').innerText : document.getElementById('labelB').innerText;
+                document.getElementById('winnerText').innerText = `${label} 승리!`;
+                document.getElementById('winnerText').className = isRed ? "text-3xl sm:text-5xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-yellow-400 to-amber-500 drop-shadow" : "text-3xl sm:text-5xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-purple-400 to-indigo-500 drop-shadow";
                 document.getElementById('gameOverModal').classList.remove('hidden');
                 return true;
             }
             return false;
         }
 
-        // --- STREAMING_CHUNK: Coding AI decision matrix for singleplay... ---
-        function updateAI() {
-            const centerOfBCourt = 600; 
+        function updateAIAgent(ai, side, role) {
+            const isTurn = (side === 'A' && shuttlecock.vx < 0 && shuttlecock.x < NET_X + 50) || 
+                           (side === 'B' && shuttlecock.vx > 0 && shuttlecock.x > NET_X - 50);
+            
+            let homeX = 0;
+            if (side === 'A') homeX = (role === 'front') ? 200 : 100;
+            else homeX = (role === 'front') ? 600 : 700;
 
-            if (shuttlecock.vx > 0 && shuttlecock.x > NET_X - 100) {
-                const targetX = shuttlecock.x;
-
-                if (playerB.x + playerB.width/2 < targetX - 10) {
-                    playerB.vx = playerB.speed;
-                } else if (playerB.x + playerB.width/2 > targetX + 10) {
-                    playerB.vx = -playerB.speed;
+            if (isTurn) {
+                let shouldHit = false;
+                if (side === 'A') {
+                    if (role === 'front' && shuttlecock.x >= NET_X - 200) shouldHit = true;
+                    if (role === 'back' && shuttlecock.x < NET_X - 150) shouldHit = true;
                 } else {
-                    playerB.vx = 0;
+                    if (role === 'front' && shuttlecock.x <= NET_X + 200) shouldHit = true;
+                    if (role === 'back' && shuttlecock.x > NET_X + 150) shouldHit = true;
                 }
 
-                const distToNet = Math.abs(playerB.x - NET_X);
-                const ballHeight = GROUND_Y - shuttlecock.y;
+                if (shouldHit) {
+                    if (ai.x + ai.width/2 < shuttlecock.x - 10) ai.vx = ai.speed;
+                    else if (ai.x + ai.width/2 > shuttlecock.x + 10) ai.vx = -ai.speed;
+                    else ai.vx = 0;
 
-                let chosenSkill = 'drive'; 
+                    const distToNet = Math.abs(ai.x - NET_X);
+                    const ballHeight = GROUND_Y - shuttlecock.y;
+                    let chosenSkill = 'drive'; 
+                    if (ballHeight > 140 && distToNet < 180 && ai.isGrounded) { if (Math.random() < 0.6) { ai.vy = ai.jumpForce; ai.isGrounded = false; chosenSkill = 'smash'; } } 
+                    else if (ballHeight < 70 && distToNet < 120) { chosenSkill = 'drop'; } 
+                    else if (distToNet > 200) { chosenSkill = 'clear'; }
 
-                if (ballHeight > 140 && distToNet < 180 && playerB.isGrounded) {
-                    if (Math.random() < 0.6) {
-                        playerB.vy = playerB.jumpForce;
-                        playerB.isGrounded = false;
-                        chosenSkill = 'smash';
+                    if (Math.abs(ai.x + ai.width/2 - shuttlecock.x) < 45 && Math.abs(ai.y + ai.height/2 - shuttlecock.y) < 50 && ai.swingTimer === 0) {
+                        ai.swingTimer = ai.swingDuration; checkRacketHit(ai, side, chosenSkill);
                     }
-                } else if (ballHeight < 70 && distToNet < 120) {
-                    chosenSkill = 'drop';
-                } else if (distToNet > 200) {
-                    chosenSkill = 'clear';
-                }
-
-                const swingDistanceX = Math.abs(playerB.x + playerB.width/2 - shuttlecock.x);
-                const swingDistanceY = Math.abs(playerB.y + playerB.height/2 - shuttlecock.y);
-
-                if (swingDistanceX < 45 && swingDistanceY < 50 && playerB.swingTimer === 0) {
-                    playerB.swingTimer = playerB.swingDuration;
-                    checkRacketHit(playerB, 'B', chosenSkill);
-                }
-
-            } else {
-                if (playerB.x + playerB.width/2 < centerOfBCourt - 15) {
-                    playerB.vx = playerB.speed * 0.6;
-                } else if (playerB.x + playerB.width/2 > centerOfBCourt + 15) {
-                    playerB.vx = -playerB.speed * 0.6;
                 } else {
-                    playerB.vx = 0;
+                    if (ai.x + ai.width/2 < homeX - 10) ai.vx = ai.speed * 0.6; else if (ai.x + ai.width/2 > homeX + 10) ai.vx = -ai.speed * 0.6; else ai.vx = 0;
                 }
+            } else {
+                if (ai.x + ai.width/2 < homeX - 10) ai.vx = ai.speed * 0.6; else if (ai.x + ai.width/2 > homeX + 10) ai.vx = -ai.speed * 0.6; else ai.vx = 0;
             }
         }
 
-        // --- STREAMING_CHUNK: Sending client inputs to host continuously... ---
-        // 클라이언트(게스트)가 자신의 이동 및 조작 입력을 호스트로 상시 전송
+        const handleGravity = (p) => {
+            p.vy += GRAVITY; p.x += p.vx; p.y += p.vy;
+            if (p.y >= GROUND_Y - p.height) { p.y = GROUND_Y - p.height; p.vy = 0; p.isGrounded = true; }
+            if (p.x < 10) p.x = 10;
+            if (p.x > VIEW_WIDTH - p.width - 10) p.x = VIEW_WIDTH - p.width - 10;
+        };
+
         function sendClientInputs() {
             if (!isClient || !conn || !conn.open) return;
-            conn.send({
-                type: 'inputs',
-                keys: {
-                    ArrowLeft: keys.ArrowLeft,
-                    ArrowRight: keys.ArrowRight,
-                    ArrowUp: keys.ArrowUp,
-                    Space: keys.Space
-                },
-                touches: {
-                    left: touches.left,
-                    right: touches.right,
-                    jump: touches.jump
-                }
-            });
+            conn.send({ type: 'inputs', keys: { ArrowLeft: keys.ArrowLeft, ArrowRight: keys.ArrowRight, ArrowUp: keys.ArrowUp, Space: keys.Space }, touches: { left: touches.left, right: touches.right, jump: touches.jump } });
         }
 
-        // --- STREAMING_CHUNK: Sending unified game state to client continuously... ---
-        // 호스트가 게임 전체 오브젝트의 렌더링 물리 상태 패킷을 클라이언트로 동기화 전송
         function sendHostState() {
             if (!isHost || !conn || !conn.open) return;
             conn.send({
-                type: 'state',
-                shuttlecock: {
-                    x: shuttlecock.x,
-                    y: shuttlecock.y,
-                    rotation: shuttlecock.rotation
-                },
-                playerA: {
-                    x: playerA.x,
-                    y: playerA.y,
-                    swingTimer: playerA.swingTimer
-                },
-                playerB: {
-                    x: playerB.x,
-                    y: playerB.y,
-                    swingTimer: playerB.swingTimer
-                },
-                scoreA: scoreA,
-                scoreB: scoreB,
-                gameState: gameState,
-                sounds: [...soundQueue], // 동기화할 소리 큐 목록 전달
-                announce: {
-                    main: document.getElementById('announceText').innerText,
-                    sub: document.getElementById('announceSubtext').innerText,
-                    opacity: document.getElementById('gameAnnounce').classList.contains('opacity-100') ? 1 : 0
-                }
+                type: 'state', isDoubles: isDoublesMode,
+                shuttlecock: { x: shuttlecock.x, y: shuttlecock.y, rotation: shuttlecock.rotation },
+                playerA1: { x: playerA1.x, y: playerA1.y, swingTimer: playerA1.swingTimer },
+                playerB1: { x: playerB1.x, y: playerB1.y, swingTimer: playerB1.swingTimer },
+                playerA2: isDoublesMode ? { x: playerA2.x, y: playerA2.y, swingTimer: playerA2.swingTimer } : null,
+                playerB2: isDoublesMode ? { x: playerB2.x, y: playerB2.y, swingTimer: playerB2.swingTimer } : null,
+                scoreA: scoreA, scoreB: scoreB, gameState: gameState, sounds: [...soundQueue],
+                announce: { main: document.getElementById('announceText').innerText, sub: document.getElementById('announceSubtext').innerText, opacity: document.getElementById('gameAnnounce').classList.contains('opacity-100') ? 1 : 0 }
             });
-            // 전송 완료된 사운드 대기열 비우기
             soundQueue = [];
         }
 
-        // --- STREAMING_CHUNK: Executing character movement and state updates... ---
         function update() {
-            if (gameState === 'START_SCREEN') {
-                clouds.forEach(c => {
-                    c.x += c.speed;
-                    if (c.x > VIEW_WIDTH + 80) c.x = -80;
-                });
-                return;
-            }
+            if (gameState === 'START_SCREEN') { clouds.forEach(c => { c.x += c.speed; if (c.x > VIEW_WIDTH + 80) c.x = -80; }); return; }
+            clouds.forEach(c => { c.x += c.speed; if (c.x > VIEW_WIDTH + 80) c.x = -80; });
 
-            clouds.forEach(c => {
-                c.x += c.speed;
-                if (c.x > VIEW_WIDTH + 80) c.x = -80;
-            });
-
-            // ------------------------------------------
-            // CASE A: PVP Client(게스트) 화면 동기화 모드
-            // ------------------------------------------
             if (isClient) {
                 if (lastReceivedState) {
-                    shuttlecock.x = lastReceivedState.shuttlecock.x;
-                    shuttlecock.y = lastReceivedState.shuttlecock.y;
-                    shuttlecock.rotation = lastReceivedState.shuttlecock.rotation;
-
-                    playerA.x = lastReceivedState.playerA.x;
-                    playerA.y = lastReceivedState.playerA.y;
-                    playerA.swingTimer = lastReceivedState.playerA.swingTimer;
-
-                    playerB.x = lastReceivedState.playerB.x;
-                    playerB.y = lastReceivedState.playerB.y;
-                    playerB.swingTimer = lastReceivedState.playerB.swingTimer;
-
-                    scoreA = lastReceivedState.scoreA;
-                    scoreB = lastReceivedState.scoreB;
-                    gameState = lastReceivedState.gameState;
-
-                    // 스코어보드 업데이트
+                    if (lastReceivedState.isDoubles !== undefined) {
+                        isDoublesMode = lastReceivedState.isDoubles;
+                        if (isDoublesMode) document.getElementById('doublesIndicator').classList.remove('hidden');
+                    }
+                    shuttlecock.x = lastReceivedState.shuttlecock.x; shuttlecock.y = lastReceivedState.shuttlecock.y; shuttlecock.rotation = lastReceivedState.shuttlecock.rotation;
+                    playerA1.x = lastReceivedState.playerA1.x; playerA1.y = lastReceivedState.playerA1.y; playerA1.swingTimer = lastReceivedState.playerA1.swingTimer;
+                    playerB1.x = lastReceivedState.playerB1.x; playerB1.y = lastReceivedState.playerB1.y; playerB1.swingTimer = lastReceivedState.playerB1.swingTimer;
+                    if (isDoublesMode && lastReceivedState.playerA2) { playerA2.x = lastReceivedState.playerA2.x; playerA2.y = lastReceivedState.playerA2.y; playerA2.swingTimer = lastReceivedState.playerA2.swingTimer; }
+                    if (isDoublesMode && lastReceivedState.playerB2) { playerB2.x = lastReceivedState.playerB2.x; playerB2.y = lastReceivedState.playerB2.y; playerB2.swingTimer = lastReceivedState.playerB2.swingTimer; }
+                    scoreA = lastReceivedState.scoreA; scoreB = lastReceivedState.scoreB; gameState = lastReceivedState.gameState;
                     updateScoreDisplay();
-
-                    // 사운드 동형 렌더링
-                    if (lastReceivedState.sounds && lastReceivedState.sounds.length > 0) {
-                        lastReceivedState.sounds.forEach(sound => playSoundLocal(sound));
-                    }
-
-                    // 자막 알림 업데이트
+                    if (lastReceivedState.sounds && lastReceivedState.sounds.length > 0) lastReceivedState.sounds.forEach(sound => playSoundLocal(sound));
+                    
                     const container = document.getElementById('gameAnnounce');
-                    document.getElementById('announceText').innerText = lastReceivedState.announce.main;
-                    document.getElementById('announceSubtext').innerText = lastReceivedState.announce.sub;
-                    if (lastReceivedState.announce.opacity === 1) {
-                        container.classList.remove('opacity-0', 'scale-75');
-                        container.classList.add('opacity-100', 'scale-100');
-                    } else {
-                        container.classList.remove('opacity-100', 'scale-100');
-                        container.classList.add('opacity-0', 'scale-75');
-                    }
-
-                    // 게임 종료 모달 처리
+                    document.getElementById('announceText').innerText = lastReceivedState.announce.main; document.getElementById('announceSubtext').innerText = lastReceivedState.announce.sub;
+                    if (lastReceivedState.announce.opacity === 1) { container.classList.remove('opacity-0', 'scale-75'); container.classList.add('opacity-100', 'scale-100'); } else { container.classList.remove('opacity-100', 'scale-100'); container.classList.add('opacity-0', 'scale-75'); }
                     checkGameOver();
                 }
-
-                // 입력 데이터 호스트 전송 수행
-                sendClientInputs();
-                return;
+                sendClientInputs(); return;
             }
 
-            // ------------------------------------------
-            // CASE B: Singleplay 또는 PVP Host 연산 모드
-            // ------------------------------------------
             if (gameState === 'SERVING_A') {
-                playerA.vx = 0;
-                if (keys.ArrowLeft || touches.left) {
-                    playerA.vx = -playerA.speed;
-                    playerA.facing = 'left';
-                }
-                if (keys.ArrowRight || touches.right) {
-                    playerA.vx = playerA.speed;
-                    playerA.facing = 'right';
-                }
-                playerA.x += playerA.vx;
-                if (playerA.x < 10) playerA.x = 10;
-                if (playerA.x > NET_X - playerA.width - 15) playerA.x = NET_X - playerA.width - 15;
-
-                shuttlecock.x = playerA.x + playerA.width + 5;
-                shuttlecock.y = playerA.y + 15;
-                shuttlecock.vx = 0;
-                shuttlecock.vy = 0;
-                shuttlecock.rotation = 0;
-
+                playerA1.vx = 0;
+                if (keys.ArrowLeft || touches.left) { playerA1.vx = -playerA1.speed; playerA1.facing = 'left'; }
+                if (keys.ArrowRight || touches.right) { playerA1.vx = playerA1.speed; playerA1.facing = 'right'; }
+                playerA1.x += playerA1.vx; if (playerA1.x < 10) playerA1.x = 10; if (playerA1.x > NET_X - playerA1.width - 15) playerA1.x = NET_X - playerA1.width - 15;
+                shuttlecock.x = playerA1.x + playerA1.width + 5; shuttlecock.y = playerA1.y + 15; shuttlecock.vx = 0; shuttlecock.vy = 0; shuttlecock.rotation = 0;
             } else if (gameState === 'SERVING_B') {
-                shuttlecock.x = playerB.x - 5;
-                shuttlecock.y = playerB.y + 15;
-                shuttlecock.vx = 0;
-                shuttlecock.vy = 0;
-                shuttlecock.rotation = Math.PI;
-
-                if (isPvpMode && hasClientConnected) {
-                    // PVP 모드 시 게스트 서브 대기 (서브 행동 trigger를 통해 진행)
-                } else {
-                    // 싱글플레이 모드 시 AI 서브 자동 발사
-                    if (aiServeTimer > 0) {
-                        aiServeTimer--;
-                    } else {
-                        const serveSkills = ['drive', 'clear', 'drop'];
-                        const randomServeSkill = serveSkills[Math.floor(Math.random() * serveSkills.length)];
-                        serve('B', randomServeSkill);
-                    }
+                shuttlecock.x = playerB1.x - 5; shuttlecock.y = playerB1.y + 15; shuttlecock.vx = 0; shuttlecock.vy = 0; shuttlecock.rotation = Math.PI;
+                if (!isPvpMode || !hasClientConnected) {
+                    if (aiServeTimer > 0) aiServeTimer--;
+                    else serve('B', ['drive', 'clear', 'drop'][Math.floor(Math.random() * 3)]);
                 }
-
             } else if (gameState === 'PLAYING') {
-                playerA.vx = 0;
-                if (keys.ArrowLeft || touches.left) {
-                    playerA.vx = -playerA.speed;
-                    playerA.facing = 'right';
-                }
-                if (keys.ArrowRight || touches.right) {
-                    playerA.vx = playerA.speed;
-                    playerA.facing = 'right';
-                }
+                playerA1.vx = 0;
+                if (keys.ArrowLeft || touches.left) playerA1.vx = -playerA1.speed;
+                if (keys.ArrowRight || touches.right) playerA1.vx = playerA1.speed;
+                if ((keys.ArrowUp || touches.jump) && playerA1.isGrounded) { playerA1.vy = playerA1.jumpForce; playerA1.isGrounded = false; }
+                handleGravity(playerA1); if (playerA1.x > NET_X - playerA1.width - 15) playerA1.x = NET_X - playerA1.width - 15;
 
-                // 점프 입력 감지
-                if ((keys.ArrowUp || touches.jump) && playerA.isGrounded) {
-                    playerA.vy = playerA.jumpForce;
-                    playerA.isGrounded = false;
-                }
-
-                playerA.vy += GRAVITY;
-                playerA.x += playerA.vx;
-                playerA.y += playerA.vy;
-
-                if (playerA.y >= GROUND_Y - playerA.height) {
-                    playerA.y = GROUND_Y - playerA.height;
-                    playerA.vy = 0;
-                    playerA.isGrounded = true;
-                }
-
-                if (playerA.x < 10) playerA.x = 10;
-                if (playerA.x > NET_X - playerA.width - 15) playerA.x = NET_X - playerA.width - 15;
-
-                // 플레이어 B (AI 혹은 PVP 게스트) 이동 제어
                 if (isPvpMode && hasClientConnected) {
-                    // 게스트 원격 제어 입력 동기화 처리
-                    playerB.vx = 0;
-                    if (clientInputs.keys.ArrowLeft || clientInputs.touches.left) {
-                        playerB.vx = -playerB.speed;
-                        playerB.facing = 'left';
-                    }
-                    if (clientInputs.keys.ArrowRight || clientInputs.touches.right) {
-                        playerB.vx = playerB.speed;
-                        playerB.facing = 'left';
-                    }
-                    if ((clientInputs.keys.ArrowUp || clientInputs.touches.jump) && playerB.isGrounded) {
-                        playerB.vy = playerB.jumpForce;
-                        playerB.isGrounded = false;
-                    }
+                    playerB1.vx = 0;
+                    if (clientInputs.keys.ArrowLeft || clientInputs.touches.left) playerB1.vx = -playerB1.speed;
+                    if (clientInputs.keys.ArrowRight || clientInputs.touches.right) playerB1.vx = playerB1.speed;
+                    if ((clientInputs.keys.ArrowUp || clientInputs.touches.jump) && playerB1.isGrounded) { playerB1.vy = playerB1.jumpForce; playerB1.isGrounded = false; }
                 } else {
-                    updateAI();
+                    updateAIAgent(playerB1, 'B', 'front');
+                }
+                handleGravity(playerB1); if (playerB1.x < NET_X + 15) playerB1.x = NET_X + 15;
+
+                if (isDoublesMode) {
+                    updateAIAgent(playerA2, 'A', 'back'); handleGravity(playerA2); if (playerA2.x > NET_X - playerA2.width - 15) playerA2.x = NET_X - playerA2.width - 15;
+                    updateAIAgent(playerB2, 'B', 'back'); handleGravity(playerB2); if (playerB2.x < NET_X + 15) playerB2.x = NET_X + 15;
                 }
 
-                playerB.vy += GRAVITY;
-                playerB.x += playerB.vx;
-                playerB.y += playerB.vy;
-
-                if (playerB.y >= GROUND_Y - playerB.height) {
-                    playerB.y = GROUND_Y - playerB.height;
-                    playerB.vy = 0;
-                    playerB.isGrounded = true;
-                }
-
-                if (playerB.x > VIEW_WIDTH - playerB.width - 10) playerB.x = VIEW_WIDTH - playerB.width - 10;
-                if (playerB.x < NET_X + 15) playerB.x = NET_X + 15;
-
-                shuttlecock.vy += GRAVITY;
-                shuttlecock.vx *= shuttlecock.drag;
-                shuttlecock.vy *= shuttlecock.verticalDrag;
-
-                shuttlecock.x += shuttlecock.vx;
-                shuttlecock.y += shuttlecock.vy;
-
+                shuttlecock.vy += GRAVITY; shuttlecock.vx *= shuttlecock.drag; shuttlecock.vy *= shuttlecock.verticalDrag;
+                shuttlecock.x += shuttlecock.vx; shuttlecock.y += shuttlecock.vy;
                 shuttlecock.rotation = Math.atan2(shuttlecock.vy, shuttlecock.vx);
 
-                trailEffect.push({
-                    x: shuttlecock.x,
-                    y: shuttlecock.y,
-                    alpha: 0.6,
-                    size: 4
-                });
-                if (trailEffect.length > 8) {
-                    trailEffect.shift();
-                }
+                trailEffect.push({ x: shuttlecock.x, y: shuttlecock.y, alpha: 0.6, size: 4 });
+                if (trailEffect.length > 8) trailEffect.shift();
 
                 checkPointsAndRules();
-
             } else if (gameState === 'GAME_OVER') {
-                const winner = scoreA >= 11 ? playerA : playerB;
-                const loser = scoreA >= 11 ? playerB : playerA;
-
-                winner.y = (GROUND_Y - winner.height) - Math.abs(Math.sin(Date.now() / 150) * 35);
-                loser.y = GROUND_Y - loser.height;
+                const isRed = scoreA >= 11;
+                playerA1.y = isRed ? (GROUND_Y - playerA1.height) - Math.abs(Math.sin(Date.now() / 150) * 35) : GROUND_Y - playerA1.height;
+                playerB1.y = !isRed ? (GROUND_Y - playerB1.height) - Math.abs(Math.sin(Date.now() / 150) * 35) : GROUND_Y - playerB1.height;
+                if (isDoublesMode) {
+                    playerA2.y = isRed ? (GROUND_Y - playerA2.height) - Math.abs(Math.sin(Date.now() / 150) * 35) : GROUND_Y - playerA2.height;
+                    playerB2.y = !isRed ? (GROUND_Y - playerB2.height) - Math.abs(Math.sin(Date.now() / 150) * 35) : GROUND_Y - playerB2.height;
+                }
             }
 
-            if (playerA.swingTimer > 0) playerA.swingTimer--;
-            if (playerB.swingTimer > 0) playerB.swingTimer--;
+            if (playerA1.swingTimer > 0) playerA1.swingTimer--; if (playerB1.swingTimer > 0) playerB1.swingTimer--;
+            if (isDoublesMode) { if (playerA2.swingTimer > 0) playerA2.swingTimer--; if (playerB2.swingTimer > 0) playerB2.swingTimer--; }
 
-            // 호스트일 경우 상태 동기화 송출
             if (isHost) sendHostState();
         }
 
-        // --- STREAMING_CHUNK: Drawing characters and dynamic expressions... ---
-        function drawPlayer(p, type) {
+        function drawPlayer(p, type, labelText) {
             ctx.save();
+            ctx.fillStyle = p.color; ctx.shadowColor = 'rgba(0,0,0,0.15)'; ctx.shadowBlur = 4; ctx.shadowOffsetY = 4;
+            const radius = 6; ctx.beginPath();
+            ctx.moveTo(p.x + radius, p.y); ctx.lineTo(p.x + p.width - radius, p.y); ctx.quadraticCurveTo(p.x + p.width, p.y, p.x + p.width, p.y + radius);
+            ctx.lineTo(p.x + p.width, p.y + p.height - radius); ctx.quadraticCurveTo(p.x + p.width, p.y + p.height, p.x + p.width - radius, p.y + p.height);
+            ctx.lineTo(p.x + radius, p.y + p.height); ctx.quadraticCurveTo(p.x, p.y + p.height, p.x, p.y + p.height - radius);
+            ctx.lineTo(p.x, p.y + radius); ctx.quadraticCurveTo(p.x, p.y, p.x + radius, p.y); ctx.closePath(); ctx.fill();
             
-            ctx.fillStyle = p.color;
-            ctx.shadowColor = 'rgba(0,0,0,0.15)';
-            ctx.shadowBlur = 4;
-            ctx.shadowOffsetY = 4;
-            
-            const radius = 6;
-            ctx.beginPath();
-            ctx.moveTo(p.x + radius, p.y);
-            ctx.lineTo(p.x + p.width - radius, p.y);
-            ctx.quadraticCurveTo(p.x + p.width, p.y, p.x + p.width, p.y + radius);
-            ctx.lineTo(p.x + p.width, p.y + p.height - radius);
-            ctx.quadraticCurveTo(p.x + p.width, p.y + p.height, p.x + p.width - radius, p.y + p.height);
-            ctx.lineTo(p.x + radius, p.y + p.height);
-            ctx.quadraticCurveTo(p.x, p.y + p.height, p.x, p.y + p.height - radius);
-            ctx.lineTo(p.x, p.y + radius);
-            ctx.quadraticCurveTo(p.x, p.y, p.x + radius, p.y);
-            ctx.closePath();
-            ctx.fill();
-            
-            ctx.fillStyle = '#1e293b';
-            ctx.shadowBlur = 0;
-            ctx.shadowOffsetY = 0;
-            const eyeY = p.y + 15;
+            ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+            ctx.font = "bold 12px 'Nunito', 'Jua', sans-serif"; ctx.textAlign = "center";
+            ctx.fillStyle = "rgba(0, 0, 0, 0.6)"; ctx.fillRect(p.x + p.width/2 - 25, p.y - 25, 50, 18);
+            ctx.fillStyle = "#ffffff"; ctx.fillText(labelText, p.x + p.width/2, p.y - 12);
 
+            ctx.fillStyle = '#1e293b'; const eyeY = p.y + 15;
             if (gameState === 'GAME_OVER') {
                 const isWinner = (scoreA >= 11 && type === 'A') || (scoreB >= 11 && type === 'B');
                 if (isWinner) {
-                    ctx.strokeStyle = '#1e293b';
-                    ctx.lineWidth = 2.5;
-                    ctx.beginPath();
-                    if (type === 'A') {
-                        ctx.arc(p.x + p.width - 10, eyeY + 2, 4, Math.PI, 0);
-                        ctx.arc(p.x + p.width - 22, eyeY + 2, 4, Math.PI, 0);
-                    } else {
-                        ctx.arc(p.x + 10, eyeY + 2, 4, Math.PI, 0);
-                        ctx.arc(p.x + 22, eyeY + 2, 4, Math.PI, 0);
-                    }
-                    ctx.stroke();
-
-                    ctx.fillStyle = '#f43f5e'; 
-                    ctx.beginPath();
-                    const mouthX = type === 'A' ? p.x + p.width - 16 : p.x + 16;
-                    ctx.arc(mouthX, eyeY + 8, 4, 0, Math.PI);
-                    ctx.fill();
-                    ctx.strokeStyle = '#1e293b';
-                    ctx.stroke();
+                    ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 2.5; ctx.beginPath();
+                    if (type === 'A') { ctx.arc(p.x + p.width - 10, eyeY + 2, 4, Math.PI, 0); ctx.arc(p.x + p.width - 22, eyeY + 2, 4, Math.PI, 0); } 
+                    else { ctx.arc(p.x + 10, eyeY + 2, 4, Math.PI, 0); ctx.arc(p.x + 22, eyeY + 2, 4, Math.PI, 0); } ctx.stroke();
+                    ctx.fillStyle = '#f43f5e'; ctx.beginPath(); ctx.arc(type === 'A' ? p.x + p.width - 16 : p.x + 16, eyeY + 8, 4, 0, Math.PI); ctx.fill(); ctx.strokeStyle = '#1e293b'; ctx.stroke();
                 } else {
-                    ctx.strokeStyle = '#38bdf8'; 
-                    ctx.lineWidth = 2.5;
-                    const lx = type === 'A' ? p.x + p.width - 24 : p.x + 8;
-                    const rx = type === 'A' ? p.x + p.width - 12 : p.x + 20;
-                    
-                    ctx.beginPath(); ctx.moveTo(lx, eyeY - 2); ctx.lineTo(lx + 6, eyeY - 2); ctx.stroke();
-                    ctx.beginPath(); ctx.moveTo(lx + 3, eyeY - 2); ctx.lineTo(lx + 3, eyeY + 8); ctx.stroke();
-                    ctx.beginPath(); ctx.moveTo(rx, eyeY - 2); ctx.lineTo(rx + 6, eyeY - 2); ctx.stroke();
-                    ctx.beginPath(); ctx.moveTo(rx + 3, eyeY - 2); ctx.lineTo(rx + 3, eyeY + 8); ctx.stroke();
-
-                    ctx.strokeStyle = '#1e293b';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    const mouthX = type === 'A' ? p.x + p.width - 16 : p.x + 16;
-                    ctx.arc(mouthX, eyeY + 12, 3, Math.PI, 0);
-                    ctx.stroke();
+                    ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2.5;
+                    const lx = type === 'A' ? p.x + p.width - 24 : p.x + 8; const rx = type === 'A' ? p.x + p.width - 12 : p.x + 20;
+                    ctx.beginPath(); ctx.moveTo(lx, eyeY - 2); ctx.lineTo(lx + 6, eyeY - 2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(lx + 3, eyeY - 2); ctx.lineTo(lx + 3, eyeY + 8); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(rx, eyeY - 2); ctx.lineTo(rx + 6, eyeY - 2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(rx + 3, eyeY - 2); ctx.lineTo(rx + 3, eyeY + 8); ctx.stroke();
+                    ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(type === 'A' ? p.x + p.width - 16 : p.x + 16, eyeY + 12, 3, Math.PI, 0); ctx.stroke();
                 }
             } else {
-                if (type === 'A') {
-                    ctx.beginPath();
-                    ctx.arc(p.x + p.width - 12, eyeY, 3.5, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.strokeStyle = '#1e293b';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.arc(p.x + p.width - 8, eyeY + 6, 3, 0, Math.PI);
-                    ctx.stroke();
-                } else {
-                    ctx.beginPath();
-                    ctx.arc(p.x + 12, eyeY, 3.5, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.strokeStyle = '#1e293b';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.moveTo(p.x + 10, eyeY + 6);
-                    ctx.lineTo(p.x + 16, eyeY + 6);
-                    ctx.stroke();
-                }
+                if (type === 'A') { ctx.beginPath(); ctx.arc(p.x + p.width - 12, eyeY, 3.5, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p.x + p.width - 8, eyeY + 6, 3, 0, Math.PI); ctx.stroke(); } 
+                else { ctx.beginPath(); ctx.arc(p.x + 12, eyeY, 3.5, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(p.x + 10, eyeY + 6); ctx.lineTo(p.x + 16, eyeY + 6); ctx.stroke(); }
             }
 
             let racketAngle = type === 'A' ? -Math.PI / 4 : -Math.PI * 3 / 4;
-            if (p.swingTimer > 0) {
-                const swingProgress = (p.swingDuration - p.swingTimer) / p.swingDuration;
-                const swingSweep = Math.PI * 1.2;
-                racketAngle += type === 'A' ? swingProgress * swingSweep : -swingProgress * swingSweep;
-            }
-
-            const rx = p.x + p.width/2;
-            const ry = p.y + p.height/2;
-
-            ctx.translate(rx, ry);
-            ctx.rotate(racketAngle);
-
-            ctx.strokeStyle = '#e2e8f0';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(0, -32);
-            ctx.stroke();
-
-            ctx.strokeStyle = '#f8fafc';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.ellipse(0, -42, 10, 14, 0, 0, Math.PI * 2);
-            ctx.stroke();
-
-            ctx.strokeStyle = '#1e293b';
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(0, -6);
-            ctx.stroke();
-
+            if (p.swingTimer > 0) racketAngle += (type === 'A' ? 1 : -1) * ((p.swingDuration - p.swingTimer) / p.swingDuration) * (Math.PI * 1.2);
+            ctx.translate(p.x + p.width/2, p.y + p.height/2); ctx.rotate(racketAngle);
+            ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -32); ctx.stroke();
+            ctx.strokeStyle = '#f8fafc'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, -42, 10, 14, 0, 0, Math.PI * 2); ctx.stroke();
+            ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -6); ctx.stroke();
             ctx.restore();
         }
 
-        // --- STREAMING_CHUNK: Drawing court components and lines... ---
         function draw() {
-            const bgGrad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
-            bgGrad.addColorStop(0, '#7dd3fc');
-            bgGrad.addColorStop(0.7, '#bae6fd');
-            bgGrad.addColorStop(1, '#e0f2fe');
-            ctx.fillStyle = bgGrad;
-            ctx.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
+            const bgGrad = ctx.createLinearGradient(0, 0, 0, GROUND_Y); bgGrad.addColorStop(0, '#7dd3fc'); bgGrad.addColorStop(0.7, '#bae6fd'); bgGrad.addColorStop(1, '#e0f2fe');
+            ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
 
             ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-            clouds.forEach(c => {
-                ctx.beginPath();
-                ctx.arc(c.x, c.y, 20 * c.scale, 0, Math.PI * 2);
-                ctx.arc(c.x + 15 * c.scale, c.y - 10 * c.scale, 25 * c.scale, 0, Math.PI * 2);
-                ctx.arc(c.x + 35 * c.scale, c.y, 20 * c.scale, 0, Math.PI * 2);
-                ctx.closePath();
-                ctx.fill();
+            clouds.forEach(c => { ctx.beginPath(); ctx.arc(c.x, c.y, 20 * c.scale, 0, Math.PI * 2); ctx.arc(c.x + 15 * c.scale, c.y - 10 * c.scale, 25 * c.scale, 0, Math.PI * 2); ctx.arc(c.x + 35 * c.scale, c.y, 20 * c.scale, 0, Math.PI * 2); ctx.closePath(); ctx.fill(); });
+
+            ctx.fillStyle = '#22c55e'; ctx.fillRect(0, GROUND_Y, VIEW_WIDTH, VIEW_HEIGHT - GROUND_Y); ctx.fillStyle = '#15803d'; ctx.fillRect(0, GROUND_Y, VIEW_WIDTH, 8);
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)'; ctx.lineWidth = 3.5; ctx.beginPath();
+            ctx.moveTo(COURT_LEFT_BOUND, GROUND_Y + 1); ctx.lineTo(COURT_LEFT_BOUND, VIEW_HEIGHT - 10); ctx.moveTo(COURT_RIGHT_BOUND, GROUND_Y + 1); ctx.lineTo(COURT_RIGHT_BOUND, VIEW_HEIGHT - 10);
+            ctx.moveTo(COURT_LEFT_BOUND, GROUND_Y + 12); ctx.lineTo(COURT_RIGHT_BOUND, GROUND_Y + 12); ctx.moveTo(180, GROUND_Y + 12); ctx.lineTo(180, VIEW_HEIGHT - 10); ctx.moveTo(VIEW_WIDTH - 180, GROUND_Y + 12); ctx.lineTo(VIEW_WIDTH - 180, VIEW_HEIGHT - 10); ctx.stroke();
+
+            ctx.fillStyle = 'rgba(21, 128, 61, 0.3)'; ctx.fillRect(0, GROUND_Y + 8, COURT_LEFT_BOUND, VIEW_HEIGHT - GROUND_Y); ctx.fillRect(COURT_RIGHT_BOUND, GROUND_Y + 8, VIEW_WIDTH - COURT_RIGHT_BOUND, VIEW_HEIGHT - GROUND_Y);
+
+            const netTopY = GROUND_Y - NET_HEIGHT; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(NET_X, GROUND_Y); ctx.lineTo(NET_X, netTopY); ctx.stroke();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)'; ctx.lineWidth = 1.5; for (let ny = netTopY + 10; ny < GROUND_Y; ny += 8) { ctx.beginPath(); ctx.moveTo(NET_X - 12, ny); ctx.lineTo(NET_X + 12, ny); ctx.stroke(); }
+            ctx.strokeStyle = '#f1f5f9'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(NET_X - 12, netTopY + 4); ctx.lineTo(NET_X + 12, netTopY + 4); ctx.stroke();
+
+            drawPlayer(playerA1, 'A', isPvpMode && !isHost ? '원격(A)' : '나');
+            drawPlayer(playerB1, 'B', isPvpMode && hasClientConnected ? (isClient?'나':'원격(B)') : 'COM(전위)');
+            if (isDoublesMode) {
+                drawPlayer(playerA2, 'A', '파트너');
+                drawPlayer(playerB2, 'B', 'COM(후위)');
+            }
+
+            if (gameState !== 'SERVING_A' && gameState !== 'SERVING_B') { trailEffect.forEach((t, i) => { ctx.save(); ctx.globalAlpha = t.alpha * (i / trailEffect.length); ctx.fillStyle = '#f8fafc'; ctx.beginPath(); ctx.arc(t.x, t.y, t.size, 0, Math.PI * 2); ctx.fill(); ctx.restore(); }); }
+
+            ctx.save(); ctx.translate(shuttlecock.x, shuttlecock.y); ctx.rotate(shuttlecock.rotation);
+            ctx.fillStyle = '#f1f5f9'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-14, -8); ctx.lineTo(-12, 0); ctx.lineTo(-14, 8); ctx.closePath(); ctx.fill();
+            ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-1, 0); ctx.lineTo(-11, 0); ctx.stroke();
+            ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(2, 0, 5, -Math.PI/2, Math.PI/2); ctx.fill();
+            ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(1, 0, 4.5, -Math.PI/2, Math.PI/2); ctx.fill(); ctx.restore();
+        }
+
+        // 설정 모달 열고 닫기 바인딩
+        const btnSettings = document.getElementById('btnSettings');
+        const settingsModal = document.getElementById('settingsModal');
+        const btnCloseSettings = document.getElementById('btnCloseSettings');
+        const btnToggleAnnounce = document.getElementById('btnToggleAnnounce');
+
+        btnSettings.addEventListener('click', () => {
+            initAudio();
+            settingsModal.classList.remove('hidden');
+        });
+
+        btnCloseSettings.addEventListener('click', () => {
+            settingsModal.classList.add('hidden');
+        });
+
+        // 자막 활성/비활성 토글 핸들러
+        btnToggleAnnounce.addEventListener('click', () => {
+            announceEnabled = !announceEnabled;
+            if (announceEnabled) {
+                btnToggleAnnounce.innerText = "켜짐 (ON)";
+                btnToggleAnnounce.className = "px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-lg active:scale-95 transition-all";
+            } else {
+                btnToggleAnnounce.innerText = "꺼짐 (OFF)";
+                btnToggleAnnounce.className = "px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 font-extrabold rounded-lg active:scale-95 transition-all";
+                // 활성화 중이던 잔여 자막 즉각 숨김 처리
+                document.getElementById('gameAnnounce').classList.remove('opacity-100', 'scale-100');
+                document.getElementById('gameAnnounce').classList.add('opacity-0', 'scale-75');
+            }
+        });
+
+        // 자막 크기 제어용 변수/버튼 바인딩
+        const btnSizeSmall = document.getElementById('btnSizeSmall');
+        const btnSizeMedium = document.getElementById('btnSizeMedium');
+        const btnSizeLarge = document.getElementById('btnSizeLarge');
+
+        function updateSizeButtonsUI() {
+            [btnSizeSmall, btnSizeMedium, btnSizeLarge].forEach(btn => {
+                btn.className = "px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-md active:scale-95 transition-all text-xs border border-slate-700";
             });
 
-            ctx.fillStyle = '#22c55e';
-            ctx.fillRect(0, GROUND_Y, VIEW_WIDTH, VIEW_HEIGHT - GROUND_Y);
-            
-            ctx.fillStyle = '#15803d';
-            ctx.fillRect(0, GROUND_Y, VIEW_WIDTH, 8);
-
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-            ctx.lineWidth = 3.5;
-            ctx.beginPath();
-            
-            ctx.moveTo(COURT_LEFT_BOUND, GROUND_Y + 1);
-            ctx.lineTo(COURT_LEFT_BOUND, VIEW_HEIGHT - 10);
-            
-            ctx.moveTo(COURT_RIGHT_BOUND, GROUND_Y + 1);
-            ctx.lineTo(COURT_RIGHT_BOUND, VIEW_HEIGHT - 10);
-
-            ctx.moveTo(COURT_LEFT_BOUND, GROUND_Y + 12);
-            ctx.lineTo(COURT_RIGHT_BOUND, GROUND_Y + 12);
-
-            ctx.moveTo(180, GROUND_Y + 12);
-            ctx.lineTo(180, VIEW_HEIGHT - 10);
-            ctx.moveTo(VIEW_WIDTH - 180, GROUND_Y + 12);
-            ctx.lineTo(VIEW_WIDTH - 180, VIEW_HEIGHT - 10);
-            ctx.stroke();
-
-            ctx.fillStyle = 'rgba(21, 128, 61, 0.3)';
-            ctx.fillRect(0, GROUND_Y + 8, COURT_LEFT_BOUND, VIEW_HEIGHT - GROUND_Y);
-            ctx.fillRect(COURT_RIGHT_BOUND, GROUND_Y + 8, VIEW_WIDTH - COURT_RIGHT_BOUND, VIEW_HEIGHT - GROUND_Y);
-
-            const netTopY = GROUND_Y - NET_HEIGHT;
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(NET_X, GROUND_Y);
-            ctx.lineTo(NET_X, netTopY);
-            ctx.stroke();
-
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
-            ctx.lineWidth = 1.5;
-            for (let ny = netTopY + 10; ny < GROUND_Y; ny += 8) {
-                ctx.beginPath();
-                ctx.moveTo(NET_X - 12, ny);
-                ctx.lineTo(NET_X + 12, ny);
-                ctx.stroke();
+            if (announceSize === 'small') {
+                btnSizeSmall.className = "px-2.5 py-1 bg-blue-600 text-white font-bold rounded-md active:scale-95 transition-all text-xs";
+            } else if (announceSize === 'medium') {
+                btnSizeMedium.className = "px-2.5 py-1 bg-blue-600 text-white font-bold rounded-md active:scale-95 transition-all text-xs";
+            } else if (announceSize === 'large') {
+                btnSizeLarge.className = "px-2.5 py-1 bg-blue-600 text-white font-bold rounded-md active:scale-95 transition-all text-xs";
             }
-            ctx.strokeStyle = '#f1f5f9';
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.moveTo(NET_X - 12, netTopY + 4);
-            ctx.lineTo(NET_X + 12, netTopY + 4);
-            ctx.stroke();
-
-            drawPlayer(playerA, 'A');
-            drawPlayer(playerB, 'B');
-
-            if (gameState !== 'SERVING_A' && gameState !== 'SERVING_B') {
-                trailEffect.forEach((t, i) => {
-                    ctx.save();
-                    ctx.globalAlpha = t.alpha * (i / trailEffect.length);
-                    ctx.fillStyle = '#f8fafc';
-                    ctx.beginPath();
-                    ctx.arc(t.x, t.y, t.size, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.restore();
-                });
-            }
-
-            ctx.save();
-            ctx.translate(shuttlecock.x, shuttlecock.y);
-            ctx.rotate(shuttlecock.rotation);
-
-            ctx.fillStyle = '#f1f5f9';
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(-14, -8);
-            ctx.lineTo(-12, 0);
-            ctx.lineTo(-14, 8);
-            ctx.closePath();
-            ctx.fill();
-
-            ctx.strokeStyle = '#cbd5e1';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(-1, 0);
-            ctx.lineTo(-11, 0);
-            ctx.stroke();
-
-            ctx.fillStyle = '#ef4444';
-            ctx.beginPath();
-            ctx.arc(2, 0, 5, -Math.PI/2, Math.PI/2);
-            ctx.fill();
-
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.arc(1, 0, 4.5, -Math.PI/2, Math.PI/2);
-            ctx.fill();
-
-            ctx.restore();
         }
 
-        // --- STREAMING_CHUNK: Running main game loop and autojoin link listener... ---
-        function gameLoop() {
-            update();
-            draw();
-            requestAnimationFrame(gameLoop);
-        }
+        btnSizeSmall.addEventListener('click', () => { announceSize = 'small'; updateSizeButtonsUI(); });
+        btnSizeMedium.addEventListener('click', () => { announceSize = 'medium'; updateSizeButtonsUI(); });
+        btnSizeLarge.addEventListener('click', () => { announceSize = 'large'; updateSizeButtonsUI(); });
 
-        // 초기 싱글 플레이 기준 서브 준비
-        resetServe('A');
-        
+        function gameLoop() { update(); draw(); requestAnimationFrame(gameLoop); }
+
         window.onload = function () {
             gameLoop();
-
-            // URL 파라미터 감지 후 초대 코드가 있을 때 PVP 입장 즉각 실행
             const urlParams = new URLSearchParams(window.location.search);
             const inviteRoom = urlParams.get('room');
             if (inviteRoom && inviteRoom.length >= 6) {
-                initAudio();
-                document.getElementById('gameStartModal').classList.add('hidden');
-                connectToHost(inviteRoom);
-            }
-        };
-
-    </script>
+                initAudio(); document.getElementById('gameStartModal').classList.add('hidden'); connectToHost(inviteRoom);
+            }</script>
 </body>
 </html>
 ```eof
