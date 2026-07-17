@@ -1,4 +1,3 @@
-<!-- STREAMING_CHUNK: Setting up the head, tailwind, and fonts... -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -30,7 +29,7 @@
             <span class="text-2xl sm:text-3xl">🏸</span>
             <div>
                 <h1 class="text-base sm:text-xl font-black tracking-wider text-amber-400">MINI BADMINTON</h1>
-                <p class="text-[9px] sm:text-xs text-slate-400">PC: [Z]스매시 [X]클리어 [C]드롭 [Space]드라이브</p>
+                <p class="text-[9px] sm:text-xs text-slate-400">PC: [Z]스매시 [X]클리어 [C]드롭 [Space]드라이브 (이동: 방향키)</p>
             </div>
         </div>
         <!-- 실시간 스코어보드 -->
@@ -128,7 +127,6 @@
         </div>
     </footer>
 
-    <!-- STREAMING_CHUNK: Synthesizing the Audio and Event System... -->
     <script>
         // --- 사운드 효과음 신시사이저 (Web Audio API) ---
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -157,7 +155,6 @@
             const now = audioCtx.currentTime;
 
             if (type === 'ting') {
-                // 스매시/드라이브 타구 시 아주 맑고 카랑카랑한 하이톤 정타 소리
                 osc.type = 'triangle';
                 osc.frequency.setValueAtTime(1100, now);
                 osc.frequency.exponentialRampToValueAtTime(1400, now + 0.02);
@@ -167,7 +164,6 @@
                 osc.start(now);
                 osc.stop(now + 0.13);
             } else if (type === 'tong') {
-                // 하이클리어/드롭/헤어핀 타구 시 약간 도톰하고 부드러운 소리
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(480, now);
                 osc.frequency.exponentialRampToValueAtTime(600, now + 0.03);
@@ -177,7 +173,6 @@
                 osc.start(now);
                 osc.stop(now + 0.19);
             } else if (type === 'phoosh') {
-                // 스윙을 헛칠 때 혹은 휘두르는 질감의 파열음
                 osc.type = 'sawtooth';
                 osc.frequency.setValueAtTime(180, now);
                 osc.frequency.exponentialRampToValueAtTime(1800, now + 0.04);
@@ -187,7 +182,6 @@
                 osc.start(now);
                 osc.stop(now + 0.23);
             } else if (type === 'score') {
-                // 기분 좋은 성공 실시간 멜로디
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(523.25, now); // C5
                 osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
@@ -198,7 +192,6 @@
                 osc.start(now);
                 osc.stop(now + 0.35);
             } else if (type === 'out') {
-                // 아웃 및 미스 시의 둔탁한 감쇠음
                 osc.type = 'sawtooth';
                 osc.frequency.setValueAtTime(240, now);
                 osc.frequency.linearRampToValueAtTime(100, now + 0.25);
@@ -209,7 +202,7 @@
             }
         }
 
-        // --- STREAMING_CHUNK: Setting up the Physics Loop and Variables... ---
+        // --- STREAMING_CHUNK: Initializing canvas and physics variables... ---
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
@@ -276,7 +269,7 @@
             vx: 0,
             vy: 0,
             speed: 4.5,
-            jumpForce: -8,
+            jumpForce: -8.2, // 점프감 개선을 위해 미세 조정
             isGrounded: true,
             color: '#ef4444', 
             swingTimer: 0,
@@ -294,7 +287,7 @@
             vx: 0,
             vy: 0,
             speed: 4.0, 
-            jumpForce: -8,
+            jumpForce: -8.2, 
             isGrounded: true,
             color: '#3b82f6', 
             swingTimer: 0,
@@ -323,9 +316,13 @@
             drive: { vx: 16, vy: -1.0, sound: 'ting', name: "☄️ DRIVE!", sub: "낮고 빠른 직선 궤적으로 속도전을 펼칩니다" }
         };
 
-        // --- STREAMING_CHUNK: Binding Controller Inputs... ---
+        // --- STREAMING_CHUNK: Configuring keyboard and touch inputs... ---
         window.addEventListener('keydown', (e) => {
             initAudio(); 
+            // 방향키 및 스페이스바 입력 시 웹페이지 기본 스크롤 동작 완벽 차단
+            if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space', 'KeyZ', 'KeyX', 'KeyC'].includes(e.code)) {
+                e.preventDefault();
+            }
             if (e.code === 'ArrowLeft') keys.ArrowLeft = true;
             if (e.code === 'ArrowRight') keys.ArrowRight = true;
             if (e.code === 'ArrowUp') keys.ArrowUp = true;
@@ -342,25 +339,18 @@
             if (e.code === 'ArrowUp') keys.ArrowUp = false;
         });
 
-        function handleTriggerAttack(type) {
-            if (gameState === 'SERVING_A') {
-                serve('A', type);
-            } else if (gameState === 'PLAYING') {
-                if (playerA.swingTimer === 0) {
-                    playerA.swingTimer = playerA.swingDuration;
-                    checkRacketHit(playerA, 'A', type);
-                }
-            }
-        }
-
+        // 모바일 가상 패드 터치 이벤트 정밀 바인딩
         const configureTouchBtn = (id, targetState) => {
             const btn = document.getElementById(id);
+            if (!btn) return;
+            
             btn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 initAudio();
                 touches[targetState] = true;
                 
-                if (targetState === 'jump' && playerA.isGrounded && gameState === 'PLAYING') {
+                // 일회성 점프 입력 처리 (물리 루프와 더불어 즉시 반응 확보)
+                if (targetState === 'jump' && playerA.isGrounded && (gameState === 'PLAYING' || gameState === 'SERVING_A')) {
                     playerA.vy = playerA.jumpForce;
                     playerA.isGrounded = false;
                 }
@@ -370,6 +360,10 @@
                 if (targetState === 'drive')  handleTriggerAttack('drive');
             });
             btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                touches[targetState] = false;
+            });
+            btn.addEventListener('touchcancel', (e) => {
                 e.preventDefault();
                 touches[targetState] = false;
             });
@@ -383,27 +377,18 @@
         configureTouchBtn('btnDrop', 'drop');
         configureTouchBtn('btnDrive', 'drive');
 
-        document.getElementById('btnStartGame').addEventListener('click', () => {
-            initAudio();
-            document.getElementById('gameStartModal').classList.add('hidden');
-            scoreA = 0;
-            scoreB = 0;
-            updateScoreDisplay();
-            resetServe('A');
-        });
+        // --- STREAMING_CHUNK: Implementing smash, clear, drop and drive mechanics... ---
+        function handleTriggerAttack(type) {
+            if (gameState === 'SERVING_A') {
+                serve('A', type);
+            } else if (gameState === 'PLAYING') {
+                if (playerA.swingTimer === 0) {
+                    playerA.swingTimer = playerA.swingDuration;
+                    checkRacketHit(playerA, 'A', type);
+                }
+            }
+        }
 
-        const handleRestart = () => {
-            scoreA = 0;
-            scoreB = 0;
-            updateScoreDisplay();
-            document.getElementById('gameOverModal').classList.add('hidden');
-            resetServe('A');
-        };
-
-        document.getElementById('btnRestart').addEventListener('click', handleRestart);
-        document.getElementById('btnModalRestart').addEventListener('click', handleRestart);
-
-        // --- STREAMING_CHUNK: Coding Racket Hit and Points Detection... ---
         function checkRacketHit(player, sender, techType = 'drive') {
             playSound('phoosh');
 
@@ -442,6 +427,7 @@
             }
         }
 
+        // --- STREAMING_CHUNK: Managing serve states and round resets... ---
         function triggerAnnounce(mainText, subText) {
             const container = document.getElementById('gameAnnounce');
             const main = document.getElementById('announceText');
@@ -488,12 +474,14 @@
             playerA.y = GROUND_Y - playerA.height;
             playerA.vx = 0;
             playerA.vy = 0;
+            playerA.isGrounded = true; // 리셋 시 안전하게 지면 판정 복구
             playerA.swingTimer = 0;
 
             playerB.x = 650;
             playerB.y = GROUND_Y - playerB.height;
             playerB.vx = 0;
             playerB.vy = 0;
+            playerB.isGrounded = true; 
             playerB.swingTimer = 0;
 
             if (winner === 'A') {
@@ -510,7 +498,7 @@
             shuttlecock.vy = 0;
         }
 
-        // --- STREAMING_CHUNK: Evaluating Out-of-Bounds and Rules... ---
+        // --- STREAMING_CHUNK: Evaluating point rules and in/out boundaries... ---
         function checkPointsAndRules() {
             const netTopY = GROUND_Y - NET_HEIGHT;
             if (shuttlecock.x + shuttlecock.radius >= NET_X - 3 && shuttlecock.x - shuttlecock.radius <= NET_X + 3) {
@@ -615,7 +603,7 @@
             return false;
         }
 
-        // --- STREAMING_CHUNK: Simulating AI intelligence... ---
+        // --- STREAMING_CHUNK: Coding intelligent decision-making for the AI... ---
         function updateAI() {
             const centerOfBCourt = 600; 
 
@@ -666,7 +654,7 @@
             }
         }
 
-        // --- STREAMING_CHUNK: Integrating Frame Physics and Engine Loop... ---
+        // --- STREAMING_CHUNK: Executing character physics updates and gravity... ---
         function update() {
             if (gameState === 'START_SCREEN') {
                 clouds.forEach(c => {
@@ -727,7 +715,8 @@
                     playerA.facing = 'right';
                 }
 
-                if (keys.ArrowUp && playerA.isGrounded) {
+                // 점프 입력 감지 (키보드 ArrowUp 및 모바일 touches.jump 동시 지원으로 완벽 작동 보장)
+                if ((keys.ArrowUp || touches.jump) && playerA.isGrounded) {
                     playerA.vy = playerA.jumpForce;
                     playerA.isGrounded = false;
                 }
@@ -792,7 +781,7 @@
             if (playerB.swingTimer > 0) playerB.swingTimer--;
         }
 
-        // --- STREAMING_CHUNK: Rendering GUI Elements on Canvas... ---
+        // --- STREAMING_CHUNK: Drawing players with dynamic eye/mouth expressions... ---
         function drawPlayer(p, type) {
             ctx.save();
             
@@ -815,7 +804,6 @@
             ctx.closePath();
             ctx.fill();
             
-            // 귀여운 세리머니 눈물 및 웃음 표정 렌더링
             ctx.fillStyle = '#1e293b';
             ctx.shadowBlur = 0;
             ctx.shadowOffsetY = 0;
@@ -824,7 +812,6 @@
             if (gameState === 'GAME_OVER') {
                 const isWinner = (scoreA >= 11 && type === 'A') || (scoreB >= 11 && type === 'B');
                 if (isWinner) {
-                    // 신난 표정: 웃는 모양 ^ ^ 과 크게 벌린 분홍색 입
                     ctx.strokeStyle = '#1e293b';
                     ctx.lineWidth = 2.5;
                     ctx.beginPath();
@@ -845,20 +832,16 @@
                     ctx.strokeStyle = '#1e293b';
                     ctx.stroke();
                 } else {
-                    // 패배한 표정: 슬픔 우는 모양 T_T 와 삐진 입
-                    ctx.strokeStyle = '#38bdf8'; // 푸른 눈물 색상
+                    ctx.strokeStyle = '#38bdf8'; 
                     ctx.lineWidth = 2.5;
                     const lx = type === 'A' ? p.x + p.width - 24 : p.x + 8;
                     const rx = type === 'A' ? p.x + p.width - 12 : p.x + 20;
                     
-                    // 왼쪽 눈물 흘리기
                     ctx.beginPath(); ctx.moveTo(lx, eyeY - 2); ctx.lineTo(lx + 6, eyeY - 2); ctx.stroke();
                     ctx.beginPath(); ctx.moveTo(lx + 3, eyeY - 2); ctx.lineTo(lx + 3, eyeY + 8); ctx.stroke();
-                    // 오른쪽 눈물 흘리기
                     ctx.beginPath(); ctx.moveTo(rx, eyeY - 2); ctx.lineTo(rx + 6, eyeY - 2); ctx.stroke();
                     ctx.beginPath(); ctx.moveTo(rx + 3, eyeY - 2); ctx.lineTo(rx + 3, eyeY + 8); ctx.stroke();
 
-                    // 시무룩한 입모양
                     ctx.strokeStyle = '#1e293b';
                     ctx.lineWidth = 2;
                     ctx.beginPath();
@@ -925,6 +908,7 @@
             ctx.restore();
         }
 
+        // --- STREAMING_CHUNK: Rendering court lines, net grids and shuttlecock trails... ---
         function draw() {
             const bgGrad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
             bgGrad.addColorStop(0, '#7dd3fc');
@@ -1043,11 +1027,21 @@
             ctx.restore();
         }
 
+        // --- STREAMING_CHUNK: Running the animation game loop... ---
         function gameLoop() {
             update();
             draw();
             requestAnimationFrame(gameLoop);
         }
+
+        document.getElementById('btnStartGame').addEventListener('click', () => {
+            initAudio();
+            document.getElementById('gameStartModal').classList.add('hidden');
+            scoreA = 0;
+            scoreB = 0;
+            updateScoreDisplay();
+            resetServe('A');
+        });
 
         resetServe('A');
         
@@ -1058,6 +1052,3 @@
     </script>
 </body>
 </html>
-```eof
-
-시작화면에서 버튼을 누르면 정상적으로 모달이 꺼지며 게임 루프로 들어갑니다! 좌/우 경계선을 통해 박진감 넘치는 "인/아웃" 랠리를 즐기시고 승리와 패배 시 귀엽게 변화하는 표정 세리머니를 확인해 보세요!
