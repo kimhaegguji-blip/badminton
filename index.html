@@ -1,12 +1,15 @@
+<!-- STREAMING_CHUNK: Setting up the responsive head and third-party WebRTC PeerJS libraries... -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <!-- 모바일 환경을 고려한 뷰포트 설정 (터치 줌 방지 및 반응형 레이아웃) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Retro Mini Badminton Challenge</title>
-    <!-- Tailwind CSS 로드 -->
+    <title>Retro Mini Badminton Challenge - PVP Multiplayer Edition</title>
+    <!-- Tailwind CSS 및 Font-Awesome 아이콘 로드 -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 실시간 P2P 데이터 연동을 위한 PeerJS 시그널링 공식 CDN 탑재 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Jua&family=Nunito:wght@700;900&display=swap" rel="stylesheet">
     <style>
         body {
@@ -15,32 +18,36 @@
             user-select: none;
             -webkit-user-select: none;
         }
-        /* 캔버스 테두리 광원 효과 */
+        /* 캔버스 외곽선 부드러운 광원 및 입체적 효과 부여 */
         .game-container {
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.25), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
         }
     </style>
 </head>
 <body class="bg-slate-900 text-white min-h-screen flex flex-col justify-between items-center overflow-x-hidden p-2 sm:p-4">
 
+    <!-- STREAMING_CHUNK: Building Header with scoreboard and quick controls... -->
     <!-- 상단 헤더 영역 -->
-    <header class="w-full max-w-4xl flex justify-between items-center px-4 py-2 bg-slate-800/80 rounded-2xl border border-slate-700/50 backdrop-blur-md mb-2">
+    <header class="w-full max-w-4xl flex justify-between items-center px-4 py-2 bg-slate-800/80 rounded-2xl border border-slate-700/50 backdrop-blur-md mb-2 z-10">
         <div class="flex items-center gap-2">
             <span class="text-2xl sm:text-3xl">🏸</span>
             <div>
-                <h1 class="text-base sm:text-xl font-black tracking-wider text-amber-400">MINI BADMINTON</h1>
-                <p class="text-[9px] sm:text-xs text-slate-400">PC: [Z]스매시 [X]클리어 [C]드롭 [Space]드라이브 (이동: 방향키)</p>
+                <div class="flex items-center gap-1.5">
+                    <h1 class="text-base sm:text-xl font-black tracking-wider text-amber-400">MINI BADMINTON</h1>
+                    <span id="pvpIndicator" class="hidden text-[9px] px-1.5 py-0.5 bg-blue-600 text-white rounded font-bold uppercase tracking-wider">PVP LIVE</span>
+                </div>
+                <p class="text-[9px] sm:text-xs text-slate-400">PC: [Z]스매시 [X]클리어 [C]드롭 [Space]드라이브</p>
             </div>
         </div>
         <!-- 실시간 스코어보드 -->
         <div class="flex items-center gap-4 bg-slate-950/80 px-4 py-1.5 rounded-xl border border-slate-700/30">
             <div class="text-center">
-                <span class="block text-[9px] text-red-400 font-bold">PLAYER A</span>
+                <span id="labelA" class="block text-[9px] text-red-400 font-bold">PLAYER A (나)</span>
                 <span id="scoreA" class="text-lg sm:text-2xl font-black text-red-500">0</span>
             </div>
             <div class="text-slate-500 font-black text-sm sm:text-lg">:</div>
             <div class="text-center">
-                <span class="block text-[9px] text-blue-400 font-bold">PLAYER B (AI)</span>
+                <span id="labelB" class="block text-[9px] text-blue-400 font-bold">PLAYER B (AI)</span>
                 <span id="scoreB" class="text-lg sm:text-2xl font-black text-blue-500">0</span>
             </div>
         </div>
@@ -50,6 +57,7 @@
         </button>
     </header>
 
+    <!-- STREAMING_CHUNK: Designing Game Viewport and Lobby Screen overlays... -->
     <!-- 게임 뷰포트 영역 -->
     <main class="relative w-full max-w-4xl aspect-[2/1] game-container bg-slate-950 rounded-2xl overflow-hidden border-4 border-slate-700">
         <!-- 메인 게임 캔버스 -->
@@ -62,10 +70,76 @@
             <p class="text-slate-300 text-xs sm:text-sm mt-2 mb-8 max-w-lg text-center px-6 leading-relaxed">
                 <span class="text-amber-400 font-bold">PC 기술 조작:</span> [Z] 스매시 ⚡ | [X] 하이클리어 🚀 | [C] 드롭/헤어핀 🎈 | [스페이스] 드라이브 ☄️<br>
                 <span class="text-blue-400 font-bold">모바일 기술 조작:</span> 하단 우측의 전용 기술 패드를 터치하여 원하는 샷을 즉시 구사하세요!<br>
-                <span class="text-emerald-400 font-bold">아웃 규정 적용:</span> 흰색 실선 경계선 바깥쪽 바닥에 셔틀콕이 떨어지면 아웃(실점) 처리됩니다.
+                <span class="text-emerald-400 font-bold">PVP 매칭 시스템:</span> 혼자서 즐기거나 다른 스마트폰/PC의 친구와 1:1 대전방을 개설해 실시간 멀티플레이를 겨루세요.
             </p>
-            <button id="btnStartGame" class="px-10 py-4 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-600 hover:to-teal-500 text-slate-950 font-black text-xl rounded-2xl shadow-lg shadow-emerald-500/20 active:scale-95 transition-all cursor-pointer pointer-events-auto">
-                경기 시작하기
+            
+            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center w-full max-w-md px-6">
+                <button id="btnPlayAI" class="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-600 hover:to-teal-500 text-slate-950 font-black text-lg rounded-2xl shadow-lg shadow-emerald-500/20 active:scale-95 transition-all">
+                    🤖 vs AI (싱글 플레이)
+                </button>
+                <button id="btnPlayPVP" class="w-full py-4 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-black text-lg rounded-2xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all">
+                    ⚔️ 친구와 대전 (온라인 PVP)
+                </button>
+            </div>
+        </div>
+
+        <!-- STREAMING_CHUNK: Injecting Interactive PVP Panel overlays... -->
+        <!-- PVP 대전방 제어 패널 -->
+        <div id="pvpPanel" class="hidden absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center z-40 transition-all duration-300">
+            <button id="btnBackToStart" class="absolute top-4 left-4 text-slate-400 hover:text-white text-sm font-bold flex items-center gap-1">
+                ◀ 처음으로
+            </button>
+            <h3 class="text-3xl font-black text-blue-400 mb-6 tracking-wide">⚔️ 온라인 PVP 대전</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl px-6">
+                <!-- 방 만들기 카드 -->
+                <div class="bg-slate-900 border border-slate-700/60 p-6 rounded-2xl flex flex-col items-center justify-between text-center">
+                    <span class="text-4xl mb-2">🏠</span>
+                    <h4 class="text-xl font-extrabold text-white">직접 방 만들기 (Host)</h4>
+                    <p class="text-xs text-slate-400 mt-1 mb-4">내가 호스트가 되어 친구를 방에 초대합니다.</p>
+                    <button id="btnCreateRoom" class="w-full py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-black rounded-xl active:scale-95 transition-all">
+                        방 생성하기
+                    </button>
+                </div>
+                
+                <!-- 참여하기 카드 -->
+                <div class="bg-slate-900 border border-slate-700/60 p-6 rounded-2xl flex flex-col items-center justify-between text-center">
+                    <span class="text-4xl mb-2">🚀</span>
+                    <h4 class="text-xl font-extrabold text-white">코드 입력해 참가 (Guest)</h4>
+                    <p class="text-xs text-slate-400 mt-1 mb-4">공유받은 방 코드나 주소를 입력하여 입장합니다.</p>
+                    <div class="flex gap-2 w-full mb-3">
+                        <input id="inputRoomId" type="text" placeholder="방 코드 6자리 입력" class="flex-1 bg-slate-950 border border-slate-700 px-3 py-2 rounded-xl text-center text-sm font-bold tracking-wider text-amber-400 focus:outline-none focus:border-amber-400">
+                        <button id="btnJoinRoom" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl text-sm active:scale-95 transition-all">
+                            입장
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STREAMING_CHUNK: Integrating Lobby Status and Loading spinners... -->
+        <!-- PVP 대기 로비 상세 현황 모달 -->
+        <div id="pvpLobbyModal" class="hidden absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center z-50">
+            <span class="text-5xl animate-spin mb-4">⏳</span>
+            <h3 id="lobbyStatusTitle" class="text-2xl font-black text-white mb-2">방을 생성하는 중...</h3>
+            <p id="lobbyStatusDesc" class="text-sm text-slate-400 mb-6 text-center max-w-sm px-4">네트워크 매칭 채널을 확보하고 있습니다.</p>
+            
+            <!-- 호스트 전용 초대 링크/코드 영역 -->
+            <div id="roomCodeArea" class="hidden flex flex-col items-center bg-slate-900 border border-slate-800 p-4 rounded-xl w-full max-w-md mb-6">
+                <span class="text-xs text-slate-400 font-bold mb-1">상대방 초대용 코드</span>
+                <span id="displayRoomId" class="text-3xl font-black text-yellow-400 tracking-widest select-all mb-4">----</span>
+                <div class="flex gap-2 w-full">
+                    <button id="btnCopyCode" class="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg active:scale-95 transition-all">
+                        📋 코드 복사
+                    </button>
+                    <button id="btnCopyLink" class="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg active:scale-95 transition-all">
+                        🔗 초대 링크 복사
+                    </button>
+                </div>
+            </div>
+            
+            <button id="btnCancelPvp" class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-sm rounded-xl active:scale-95 transition-all">
+                방 나가기
             </button>
         </div>
 
@@ -86,6 +160,7 @@
         </div>
     </main>
 
+    <!-- STREAMING_CHUNK: Rendering Mobile Controls pad... -->
     <!-- 모바일 전용 가상 조작 버튼 패널 -->
     <footer class="w-full max-w-4xl grid grid-cols-12 gap-2 mt-2 px-1 pb-2">
         <!-- 왼쪽: 이동 컨트롤 패드 (5칸) -->
@@ -127,6 +202,7 @@
         </div>
     </footer>
 
+    <!-- STREAMING_CHUNK: Coding synthesized audio and Web Audio API functions... -->
     <script>
         // --- 사운드 효과음 신시사이저 (Web Audio API) ---
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -139,7 +215,7 @@
         }
 
         // '팅', '통', '푸슉' 사운드를 신디사이징 기술로 정밀 구현
-        function playSound(type) {
+        function playSoundLocal(type) {
             initAudio();
             if (!audioCtx) return;
 
@@ -202,7 +278,23 @@
             }
         }
 
-        // --- STREAMING_CHUNK: Initializing canvas and physics variables... ---
+        // --- STREAMING_CHUNK: Declaring game variables and P2P multiplay variables... ---
+        // P2P 멀티플레이어 환경 변수들
+        let peer = null;
+        let conn = null;
+        let isPvpMode = false;
+        let isHost = false;
+        let isClient = false;
+        let hasClientConnected = false;
+        let lastReceivedState = null;
+        let soundQueue = [];
+
+        // 클라이언트로부터 받아올 원격 조작 입력 저장소
+        let clientInputs = {
+            keys: { ArrowLeft: false, ArrowRight: false, ArrowUp: false, Space: false },
+            touches: { left: false, right: false, jump: false }
+        };
+
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
@@ -213,10 +305,10 @@
         canvas.height = VIEW_HEIGHT;
 
         // 게임 물리 변수들
-        const GROUND_Y = 340; // 바닥 높이
-        const GRAVITY = 0.25; // 중력 가속도
-        const NET_X = VIEW_WIDTH / 2; // 네트 중앙 X값
-        const NET_HEIGHT = 80; // 네트 높이 (바닥 위로 솟은 크기)
+        const GROUND_Y = 340; 
+        const GRAVITY = 0.25; 
+        const NET_X = VIEW_WIDTH / 2; 
+        const NET_HEIGHT = 80; 
 
         // 아웃(Out) 판정을 위한 코트 물리적 경계선 범위 (좌측 80, 우측 720)
         const COURT_LEFT_BOUND = 80;
@@ -269,7 +361,7 @@
             vx: 0,
             vy: 0,
             speed: 4.5,
-            jumpForce: -8.2, // 점프감 개선을 위해 미세 조정
+            jumpForce: -8,
             isGrounded: true,
             color: '#ef4444', 
             swingTimer: 0,
@@ -278,7 +370,7 @@
             facing: 'right'
         };
 
-        // 2. 플레이어 B 정의 (AI - 파란색)
+        // 2. 플레이어 B 정의 (AI 혹은 원격 플레이어 B - 파란색)
         const playerB = {
             x: 650,
             y: GROUND_Y - 50,
@@ -287,7 +379,7 @@
             vx: 0,
             vy: 0,
             speed: 4.0, 
-            jumpForce: -8.2, 
+            jumpForce: -8,
             isGrounded: true,
             color: '#3b82f6', 
             swingTimer: 0,
@@ -316,10 +408,18 @@
             drive: { vx: 16, vy: -1.0, sound: 'ting', name: "☄️ DRIVE!", sub: "낮고 빠른 직선 궤적으로 속도전을 펼칩니다" }
         };
 
-        // --- STREAMING_CHUNK: Configuring keyboard and touch inputs... ---
+        // --- STREAMING_CHUNK: Integrating sound trigger hooks with Network synchronization... ---
+        // 로컬 오디오 재생과 호스트의 사운드 동기화 큐 전송을 결합한 사운드 랩핑 함수
+        function playSound(type) {
+            playSoundLocal(type);
+            if (isHost && conn && conn.open) {
+                soundQueue.push(type);
+            }
+        }
+
+        // --- STREAMING_CHUNK: Configuring controller events and multi-device inputs... ---
         window.addEventListener('keydown', (e) => {
             initAudio(); 
-            // 방향키 및 스페이스바 입력 시 웹페이지 기본 스크롤 동작 완벽 차단
             if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space', 'KeyZ', 'KeyX', 'KeyC'].includes(e.code)) {
                 e.preventDefault();
             }
@@ -339,20 +439,44 @@
             if (e.code === 'ArrowUp') keys.ArrowUp = false;
         });
 
-        // 모바일 가상 패드 터치 이벤트 정밀 바인딩
+        function handleTriggerAttack(type) {
+            if (isClient) {
+                // 클라이언트 기기일 경우, 호스트에게 행동 패킷(trigger)을 즉시 전송
+                if (conn && conn.open) {
+                    conn.send({
+                        type: 'trigger',
+                        tech: type
+                    });
+                }
+                return;
+            }
+
+            if (gameState === 'SERVING_A') {
+                serve('A', type);
+            } else if (gameState === 'PLAYING') {
+                if (playerA.swingTimer === 0) {
+                    playerA.swingTimer = playerA.swingDuration;
+                    checkRacketHit(playerA, 'A', type);
+                }
+            }
+        }
+
+        // 모바일 가상 패드 바인딩
         const configureTouchBtn = (id, targetState) => {
             const btn = document.getElementById(id);
-            if (!btn) return;
-            
             btn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 initAudio();
                 touches[targetState] = true;
                 
-                // 일회성 점프 입력 처리 (물리 루프와 더불어 즉시 반응 확보)
-                if (targetState === 'jump' && playerA.isGrounded && (gameState === 'PLAYING' || gameState === 'SERVING_A')) {
-                    playerA.vy = playerA.jumpForce;
-                    playerA.isGrounded = false;
+                if (targetState === 'jump') {
+                    if (isClient) {
+                        // 클라이언트의 점프 입력 전송
+                        sendClientInputs();
+                    } else if (playerA.isGrounded && gameState === 'PLAYING') {
+                        playerA.vy = playerA.jumpForce;
+                        playerA.isGrounded = false;
+                    }
                 }
                 if (targetState === 'smash')  handleTriggerAttack('smash');
                 if (targetState === 'clear')  handleTriggerAttack('clear');
@@ -362,10 +486,7 @@
             btn.addEventListener('touchend', (e) => {
                 e.preventDefault();
                 touches[targetState] = false;
-            });
-            btn.addEventListener('touchcancel', (e) => {
-                e.preventDefault();
-                touches[targetState] = false;
+                if (isClient) sendClientInputs();
             });
         };
 
@@ -377,18 +498,230 @@
         configureTouchBtn('btnDrop', 'drop');
         configureTouchBtn('btnDrive', 'drive');
 
-        // --- STREAMING_CHUNK: Implementing smash, clear, drop and drive mechanics... ---
-        function handleTriggerAttack(type) {
-            if (gameState === 'SERVING_A') {
-                serve('A', type);
-            } else if (gameState === 'PLAYING') {
-                if (playerA.swingTimer === 0) {
-                    playerA.swingTimer = playerA.swingDuration;
-                    checkRacketHit(playerA, 'A', type);
-                }
+        // 싱글플레이 모드 시작 버튼
+        document.getElementById('btnPlayAI').addEventListener('click', () => {
+            initAudio();
+            isPvpMode = false;
+            document.getElementById('pvpIndicator').classList.add('hidden');
+            document.getElementById('gameStartModal').classList.add('hidden');
+            document.getElementById('labelA').innerText = "PLAYER A (나)";
+            document.getElementById('labelB').innerText = "PLAYER B (AI)";
+            scoreA = 0;
+            scoreB = 0;
+            updateScoreDisplay();
+            resetServe('A');
+        });
+
+        // 멀티플레이어 PVP 제어 패널 열기
+        document.getElementById('btnPlayPVP').addEventListener('click', () => {
+            initAudio();
+            document.getElementById('pvpPanel').classList.remove('hidden');
+        });
+
+        document.getElementById('btnBackToStart').addEventListener('click', () => {
+            document.getElementById('pvpPanel').classList.add('hidden');
+        });
+
+        // --- STREAMING_CHUNK: Coding PeerJS initialization and Host Room creation... ---
+        // PVP 호스트 방 생성하기
+        document.getElementById('btnCreateRoom').addEventListener('click', () => {
+            initAudio();
+            isPvpMode = true;
+            isHost = true;
+            isClient = false;
+            document.getElementById('pvpIndicator').classList.remove('hidden');
+            document.getElementById('pvpIndicator').innerText = "PVP HOST";
+
+            showLobbyStatus("방 코드 생성하는 중...", "매칭 네트워크 서버에 대기 구역을 생성하고 있습니다.");
+            
+            // 6자리 임의 숫자방 ID 생성 (가독성 향상)
+            const randomCode = Math.floor(100000 + Math.random() * 900000);
+            peer = new Peer('badminton-' + randomCode);
+
+            peer.on('open', (id) => {
+                const cleanCode = id.replace('badminton-', '');
+                document.getElementById('lobbyStatusTitle').innerText = "상대방 접속 대기 중...";
+                document.getElementById('lobbyStatusDesc').innerText = "초대용 코드 또는 링크를 친구에게 공유해 보세요!";
+                document.getElementById('roomCodeArea').classList.remove('hidden');
+                document.getElementById('displayRoomId').innerText = cleanCode;
+            });
+
+            peer.on('connection', (connection) => {
+                conn = connection;
+                setupConnectionListeners();
+            });
+
+            peer.on('error', (err) => {
+                console.error("PeerJS Error:", err);
+                triggerAnnounce("⚠️ 네트워크 오류", "연결에 실패했습니다. 다시 개설해 주세요.");
+                cleanupConnection();
+            });
+        });
+
+        // --- STREAMING_CHUNK: Coding Guest JoinRoom logic and auto join link... ---
+        // PVP 게스트가 호스트 코드로 직접 참가하기
+        document.getElementById('btnJoinRoom').addEventListener('click', () => {
+            const codeInput = document.getElementById('inputRoomId').value.trim();
+            if (!codeInput || codeInput.length < 5) {
+                triggerAnnounce("⚠️ 코드 불완전", "올바른 6자리 방 코드를 입력하세요.");
+                return;
             }
+            initAudio();
+            connectToHost(codeInput);
+        });
+
+        // 호스트 연결 시도 함수 (링크 및 코드 겸용)
+        function connectToHost(roomCode) {
+            isPvpMode = true;
+            isHost = false;
+            isClient = true;
+            document.getElementById('pvpIndicator').classList.remove('hidden');
+            document.getElementById('pvpIndicator').innerText = "PVP GUEST";
+
+            showLobbyStatus("친구의 방에 연결하는 중...", "호스트의 기기와 실시간 채널을 동기화하고 있습니다.");
+
+            // 게스트 전용 난수 피어 ID 생성
+            const guestRand = Math.floor(Math.random() * 99999);
+            peer = new Peer('guest-' + guestRand);
+
+            peer.on('open', () => {
+                conn = peer.connect('badminton-' + roomCode);
+                setupConnectionListeners();
+            });
+
+            peer.on('error', (err) => {
+                console.error("PeerJS Guest Error:", err);
+                triggerAnnounce("⚠️ 연결 실패", "방 코드가 틀렸거나 호스트가 접속을 종료했습니다.");
+                cleanupConnection();
+            });
         }
 
+        // 로비 현황 제어 함수
+        function showLobbyStatus(title, desc) {
+            document.getElementById('pvpLobbyModal').classList.remove('hidden');
+            document.getElementById('lobbyStatusTitle').innerText = title;
+            document.getElementById('lobbyStatusDesc').innerText = desc;
+            document.getElementById('roomCodeArea').classList.add('hidden');
+        }
+
+        // --- STREAMING_CHUNK: Coding WebRTC Data channel connection events... ---
+        // 웹RTC 데이터 커넥션 이벤트 바인딩
+        function setupConnectionListeners() {
+            conn.on('open', () => {
+                hasClientConnected = true;
+                // 모달 및 패널 숨기고 본 게임 랠리 시작
+                document.getElementById('pvpLobbyModal').classList.add('hidden');
+                document.getElementById('pvpPanel').classList.add('hidden');
+                document.getElementById('gameStartModal').classList.add('hidden');
+
+                if (isHost) {
+                    document.getElementById('labelA').innerText = "PLAYER A (호스트)";
+                    document.getElementById('labelB').innerText = "PLAYER B (GUEST)";
+                    triggerAnnounce("⚔️ PVP 대전 개막", "게스트 접속 성공! 경기를 시작합니다.");
+                    scoreA = 0;
+                    scoreB = 0;
+                    updateScoreDisplay();
+                    resetServe('A');
+                } else {
+                    document.getElementById('labelA').innerText = "PLAYER A (HOST)";
+                    document.getElementById('labelB').innerText = "PLAYER B (게스트)";
+                    triggerAnnounce("⚔️ PVP 대전 참여", "호스트 코트 접속 성공! 행운을 빕니다!");
+                }
+            });
+
+            conn.on('data', (data) => {
+                if (isHost) {
+                    // 호스트가 클라이언트로부터 키/터치 제어 입력을 받았을 때
+                    if (data.type === 'inputs') {
+                        clientInputs.keys = data.keys;
+                        clientInputs.touches = data.touches;
+                    } else if (data.type === 'trigger') {
+                        const techType = data.tech;
+                        if (gameState === 'SERVING_B') {
+                            serve('B', techType);
+                        } else if (gameState === 'PLAYING') {
+                            if (playerB.swingTimer === 0) {
+                                playerB.swingTimer = playerB.swingDuration;
+                                checkRacketHit(playerB, 'B', techType);
+                            }
+                        }
+                    }
+                } else if (isClient) {
+                    // 클라이언트가 호스트로부터 60fps 전체 렌더링 동형(state)을 받았을 때
+                    if (data.type === 'state') {
+                        lastReceivedState = data;
+                    }
+                }
+            });
+
+            conn.on('close', () => {
+                triggerAnnounce("🔌 대전 종료", "상대방과의 멀티플레이 연결이 끊어졌습니다.");
+                cleanupConnection();
+            });
+
+            conn.on('error', (err) => {
+                console.error("Connection Error:", err);
+                cleanupConnection();
+            });
+        }
+
+        // --- STREAMING_CHUNK: Creating Clipboard sharing for invitation codes... ---
+        // 주소 링크 복사 기능 (클립보드 API 대체)
+        function copyTextToClipboard(text, successMsg) {
+            const tempInput = document.createElement("textarea");
+            tempInput.value = text;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            try {
+                document.execCommand("copy");
+                triggerAnnounce("📋 복사 완료!", successMsg);
+            } catch (err) {
+                console.error("복사 오류:", err);
+            }
+            document.body.removeChild(tempInput);
+        }
+
+        document.getElementById('btnCopyCode').addEventListener('click', () => {
+            const roomCode = document.getElementById('displayRoomId').innerText;
+            copyTextToClipboard(roomCode, "방 입장코드 6자리가 복사되었습니다.");
+        });
+
+        document.getElementById('btnCopyLink').addEventListener('click', () => {
+            const roomCode = document.getElementById('displayRoomId').innerText;
+            const inviteUrl = window.location.origin + window.location.pathname + '?room=' + roomCode;
+            copyTextToClipboard(inviteUrl, "초대 링크가 복사되었습니다. 친구에게 전송하세요!");
+        });
+
+        // 로비 중도 탈출 시 소켓 연결 해제
+        document.getElementById('btnCancelPvp').addEventListener('click', cleanupConnection);
+        document.getElementById('btnBackToStart').addEventListener('click', cleanupConnection);
+
+        function cleanupConnection() {
+            if (conn) {
+                conn.close();
+                conn = null;
+            }
+            if (peer) {
+                peer.destroy();
+                peer = null;
+            }
+            isHost = false;
+            isClient = false;
+            isPvpMode = false;
+            hasClientConnected = false;
+            lastReceivedState = null;
+            gameState = 'START_SCREEN';
+            
+            // UI 복구
+            document.getElementById('pvpIndicator').classList.add('hidden');
+            document.getElementById('pvpLobbyModal').classList.add('hidden');
+            document.getElementById('pvpPanel').classList.add('hidden');
+            document.getElementById('gameStartModal').classList.remove('hidden');
+            document.getElementById('labelA').innerText = "PLAYER A (나)";
+            document.getElementById('labelB').innerText = "PLAYER B (AI)";
+        }
+
+        // --- STREAMING_CHUNK: Coding Racket hit logic with exact physics... ---
         function checkRacketHit(player, sender, techType = 'drive') {
             playSound('phoosh');
 
@@ -427,7 +760,7 @@
             }
         }
 
-        // --- STREAMING_CHUNK: Managing serve states and round resets... ---
+        // --- STREAMING_CHUNK: Managing serve logic and tech parameters... ---
         function triggerAnnounce(mainText, subText) {
             const container = document.getElementById('gameAnnounce');
             const main = document.getElementById('announceText');
@@ -451,18 +784,32 @@
             gameState = 'PLAYING';
             aiServeTimer = 0;
 
-            const shot = techShots[techType] || techShots.drive;
+            // 서브 시에는 스매시 등 하향 기술을 쓰더라도 바닥에 바로 꽂히지 않고,
+            // 기술의 강도 테마를 유지한 채 항상 상향으로 아름답게 솟구치도록 보정 궤적 적용
+            let serveVx = 11;
+            let serveVy = -5.5;
+
+            if (techType === 'smash') {
+                serveVx = 13; 
+                serveVy = -4.5;
+            } else if (techType === 'clear') {
+                serveVx = 8.5; 
+                serveVy = -10;
+            } else if (techType === 'drop') {
+                serveVx = 6.5; 
+                serveVy = -4.5;
+            }
 
             if (server === 'A') {
-                shuttlecock.vx = Math.abs(shot.vx) * 0.75;
-                shuttlecock.vy = shot.vy - 1.5;
+                shuttlecock.vx = serveVx;
+                shuttlecock.vy = serveVy;
                 lastToucher = 'A';
                 triggerAnnounce("⚡ SERVE!", "플레이어 A의 기술 서브 시작!");
             } else {
-                shuttlecock.vx = -Math.abs(shot.vx) * 0.75;
-                shuttlecock.vy = shot.vy - 1.5;
+                shuttlecock.vx = -serveVx;
+                shuttlecock.vy = serveVy;
                 lastToucher = 'B';
-                triggerAnnounce("🤖 AI SERVE!", "컴퓨터 AI의 예측불허 서브!");
+                triggerAnnounce("☄️ SERVE!", "플레이어 B의 기술 서브 시작!");
             }
         }
 
@@ -474,7 +821,7 @@
             playerA.y = GROUND_Y - playerA.height;
             playerA.vx = 0;
             playerA.vy = 0;
-            playerA.isGrounded = true; // 리셋 시 안전하게 지면 판정 복구
+            playerA.isGrounded = true; 
             playerA.swingTimer = 0;
 
             playerB.x = 650;
@@ -498,8 +845,12 @@
             shuttlecock.vy = 0;
         }
 
-        // --- STREAMING_CHUNK: Evaluating point rules and in/out boundaries... ---
+        // --- STREAMING_CHUNK: Evaluating points rules and court bound lines... ---
         function checkPointsAndRules() {
+            // PVP 게스트는 직접 물리 점수 판정을 하지 않고, 호스트 패킷을 기다림
+            if (isClient) return;
+
+            // 1. 네트 충돌 판정
             const netTopY = GROUND_Y - NET_HEIGHT;
             if (shuttlecock.x + shuttlecock.radius >= NET_X - 3 && shuttlecock.x - shuttlecock.radius <= NET_X + 3) {
                 if (shuttlecock.y >= netTopY) {
@@ -508,12 +859,12 @@
                     
                     if (lastToucher === 'A') {
                         scoreB++;
-                        triggerAnnounce("NET CATCH!", "플레이어 A의 실책 (네트 터치)");
+                        triggerAnnounce("NET CATCH! 🔴", "플레이어 A의 타구 네트 걸림! B 득점!");
                         updateScoreDisplay();
                         if (!checkGameOver()) resetServe('B');
                     } else if (lastToucher === 'B') {
                         scoreA++;
-                        triggerAnnounce("NET CATCH!", "AI의 실책 (네트 터치)");
+                        triggerAnnounce("NET CATCH! 🔵", "플레이어 B의 타구 네트 걸림! A 득점!");
                         updateScoreDisplay();
                         if (!checkGameOver()) resetServe('A');
                     } else {
@@ -531,51 +882,73 @@
                 }
             }
 
+            // 2. 바닥 착지 판정 (여기에 완벽하고 일관된 점수 계산 로직 매핑 구현)
             if (shuttlecock.y + shuttlecock.radius >= GROUND_Y) {
                 shuttlecock.y = GROUND_Y - shuttlecock.radius;
                 const landX = shuttlecock.x;
+                
+                const landSide = landX < NET_X ? 'A' : 'B';
+                const isInBounds = (landSide === 'A' && landX >= COURT_LEFT_BOUND) || (landSide === 'B' && landX <= COURT_RIGHT_BOUND);
 
-                if (landX < NET_X) {
-                    if (landX < COURT_LEFT_BOUND) {
-                        playSound('out');
+                if (landSide === 'A') {
+                    if (isInBounds) {
+                        if (lastToucher === 'B') {
+                            scoreB++;
+                            playSound('out');
+                            triggerAnnounce("IN! 🔵", "B의 정교한 인바운드 공격 성공!");
+                            updateScoreDisplay();
+                            if (!checkGameOver()) resetServe('B');
+                        } else {
+                            scoreB++;
+                            playSound('out');
+                            triggerAnnounce("실책! 🔴", "플레이어 A의 타구 자가 진영 낙하!");
+                            updateScoreDisplay();
+                            if (!checkGameOver()) resetServe('B');
+                        }
+                    } else {
                         if (lastToucher === 'B') {
                             scoreA++;
-                            triggerAnnounce("OUT! 🟢", "AI의 타구 범위 이탈! 플레이어 A 득점!");
+                            playSound('score');
+                            triggerAnnounce("OUT! 🟢", "B의 타구 라인 아웃! 플레이어 A 득점!");
                             updateScoreDisplay();
                             if (!checkGameOver()) resetServe('A');
                         } else {
                             scoreB++;
-                            triggerAnnounce("OUT! 🔴", "플레이어 A의 라인 아웃! AI 득점!");
+                            playSound('out');
+                            triggerAnnounce("OUT! 🔴", "플레이어 A의 아웃! B 득점!");
                             updateScoreDisplay();
                             if (!checkGameOver()) resetServe('B');
                         }
-                    } else {
-                        scoreB++;
-                        playSound('out');
-                        triggerAnnounce("IN! 🔵", "AI의 코트 안 인바운드 공격 성공!");
-                        updateScoreDisplay();
-                        if (!checkGameOver()) resetServe('B');
                     }
                 } else {
-                    if (landX > COURT_RIGHT_BOUND) {
-                        playSound('out');
+                    if (isInBounds) {
+                        if (lastToucher === 'A') {
+                            scoreA++;
+                            playSound('score');
+                            triggerAnnounce("IN! 🔴", "플레이어 A의 강공 인바운드 성공!");
+                            updateScoreDisplay();
+                            if (!checkGameOver()) resetServe('A');
+                        } else {
+                            scoreA++;
+                            playSound('score');
+                            triggerAnnounce("실책! 🔵", "B의 타구 자가 진영 낙하!");
+                            updateScoreDisplay();
+                            if (!checkGameOver()) resetServe('A');
+                        }
+                    } else {
                         if (lastToucher === 'A') {
                             scoreB++;
-                            triggerAnnounce("OUT! 🔴", "플레이어 A의 타구 범위 이탈! AI 득점!");
+                            playSound('out');
+                            triggerAnnounce("OUT! 🔴", "플레이어 A의 타구 아웃! B 득점!");
                             updateScoreDisplay();
                             if (!checkGameOver()) resetServe('B');
                         } else {
                             scoreA++;
-                            triggerAnnounce("OUT! 🟢", "AI의 라인 아웃! 플레이어 A 득점!");
+                            playSound('score');
+                            triggerAnnounce("OUT! 🟢", "B의 타구 아웃! 플레이어 A 득점!");
                             updateScoreDisplay();
                             if (!checkGameOver()) resetServe('A');
                         }
-                    } else {
-                        scoreA++;
-                        playSound('score');
-                        triggerAnnounce("IN! 🔴", "플레이어 A의 기습 인바운드 공격 성공!");
-                        updateScoreDisplay();
-                        if (!checkGameOver()) resetServe('A');
                     }
                 }
             }
@@ -589,21 +962,23 @@
         function checkGameOver() {
             if (scoreA >= 11) {
                 gameState = 'GAME_OVER';
-                document.getElementById('winnerText').innerText = "PLAYER A WINS!";
-                document.getElementById('winnerText').className = "text-4xl sm:text-6xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-yellow-400 to-amber-500 drop-shadow";
+                const labelA = document.getElementById('labelA').innerText;
+                document.getElementById('winnerText').innerText = `${labelA} 승리!`;
+                document.getElementById('winnerText').className = "text-3xl sm:text-5xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-yellow-400 to-amber-500 drop-shadow";
                 document.getElementById('gameOverModal').classList.remove('hidden');
                 return true;
             } else if (scoreB >= 11) {
                 gameState = 'GAME_OVER';
-                document.getElementById('winnerText').innerText = "PLAYER B (AI) WINS!";
-                document.getElementById('winnerText').className = "text-4xl sm:text-6xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-purple-400 to-indigo-500 drop-shadow";
+                const labelB = document.getElementById('labelB').innerText;
+                document.getElementById('winnerText').innerText = `${labelB} 승리!`;
+                document.getElementById('winnerText').className = "text-3xl sm:text-5xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-purple-400 to-indigo-500 drop-shadow";
                 document.getElementById('gameOverModal').classList.remove('hidden');
                 return true;
             }
             return false;
         }
 
-        // --- STREAMING_CHUNK: Coding intelligent decision-making for the AI... ---
+        // --- STREAMING_CHUNK: Coding AI decision matrix for singleplay... ---
         function updateAI() {
             const centerOfBCourt = 600; 
 
@@ -654,7 +1029,62 @@
             }
         }
 
-        // --- STREAMING_CHUNK: Executing character physics updates and gravity... ---
+        // --- STREAMING_CHUNK: Sending client inputs to host continuously... ---
+        // 클라이언트(게스트)가 자신의 이동 및 조작 입력을 호스트로 상시 전송
+        function sendClientInputs() {
+            if (!isClient || !conn || !conn.open) return;
+            conn.send({
+                type: 'inputs',
+                keys: {
+                    ArrowLeft: keys.ArrowLeft,
+                    ArrowRight: keys.ArrowRight,
+                    ArrowUp: keys.ArrowUp,
+                    Space: keys.Space
+                },
+                touches: {
+                    left: touches.left,
+                    right: touches.right,
+                    jump: touches.jump
+                }
+            });
+        }
+
+        // --- STREAMING_CHUNK: Sending unified game state to client continuously... ---
+        // 호스트가 게임 전체 오브젝트의 렌더링 물리 상태 패킷을 클라이언트로 동기화 전송
+        function sendHostState() {
+            if (!isHost || !conn || !conn.open) return;
+            conn.send({
+                type: 'state',
+                shuttlecock: {
+                    x: shuttlecock.x,
+                    y: shuttlecock.y,
+                    rotation: shuttlecock.rotation
+                },
+                playerA: {
+                    x: playerA.x,
+                    y: playerA.y,
+                    swingTimer: playerA.swingTimer
+                },
+                playerB: {
+                    x: playerB.x,
+                    y: playerB.y,
+                    swingTimer: playerB.swingTimer
+                },
+                scoreA: scoreA,
+                scoreB: scoreB,
+                gameState: gameState,
+                sounds: [...soundQueue], // 동기화할 소리 큐 목록 전달
+                announce: {
+                    main: document.getElementById('announceText').innerText,
+                    sub: document.getElementById('announceSubtext').innerText,
+                    opacity: document.getElementById('gameAnnounce').classList.contains('opacity-100') ? 1 : 0
+                }
+            });
+            // 전송 완료된 사운드 대기열 비우기
+            soundQueue = [];
+        }
+
+        // --- STREAMING_CHUNK: Executing character movement and state updates... ---
         function update() {
             if (gameState === 'START_SCREEN') {
                 clouds.forEach(c => {
@@ -669,6 +1099,59 @@
                 if (c.x > VIEW_WIDTH + 80) c.x = -80;
             });
 
+            // ------------------------------------------
+            // CASE A: PVP Client(게스트) 화면 동기화 모드
+            // ------------------------------------------
+            if (isClient) {
+                if (lastReceivedState) {
+                    shuttlecock.x = lastReceivedState.shuttlecock.x;
+                    shuttlecock.y = lastReceivedState.shuttlecock.y;
+                    shuttlecock.rotation = lastReceivedState.shuttlecock.rotation;
+
+                    playerA.x = lastReceivedState.playerA.x;
+                    playerA.y = lastReceivedState.playerA.y;
+                    playerA.swingTimer = lastReceivedState.playerA.swingTimer;
+
+                    playerB.x = lastReceivedState.playerB.x;
+                    playerB.y = lastReceivedState.playerB.y;
+                    playerB.swingTimer = lastReceivedState.playerB.swingTimer;
+
+                    scoreA = lastReceivedState.scoreA;
+                    scoreB = lastReceivedState.scoreB;
+                    gameState = lastReceivedState.gameState;
+
+                    // 스코어보드 업데이트
+                    updateScoreDisplay();
+
+                    // 사운드 동형 렌더링
+                    if (lastReceivedState.sounds && lastReceivedState.sounds.length > 0) {
+                        lastReceivedState.sounds.forEach(sound => playSoundLocal(sound));
+                    }
+
+                    // 자막 알림 업데이트
+                    const container = document.getElementById('gameAnnounce');
+                    document.getElementById('announceText').innerText = lastReceivedState.announce.main;
+                    document.getElementById('announceSubtext').innerText = lastReceivedState.announce.sub;
+                    if (lastReceivedState.announce.opacity === 1) {
+                        container.classList.remove('opacity-0', 'scale-75');
+                        container.classList.add('opacity-100', 'scale-100');
+                    } else {
+                        container.classList.remove('opacity-100', 'scale-100');
+                        container.classList.add('opacity-0', 'scale-75');
+                    }
+
+                    // 게임 종료 모달 처리
+                    checkGameOver();
+                }
+
+                // 입력 데이터 호스트 전송 수행
+                sendClientInputs();
+                return;
+            }
+
+            // ------------------------------------------
+            // CASE B: Singleplay 또는 PVP Host 연산 모드
+            // ------------------------------------------
             if (gameState === 'SERVING_A') {
                 playerA.vx = 0;
                 if (keys.ArrowLeft || touches.left) {
@@ -696,26 +1179,31 @@
                 shuttlecock.vy = 0;
                 shuttlecock.rotation = Math.PI;
 
-                if (aiServeTimer > 0) {
-                    aiServeTimer--;
+                if (isPvpMode && hasClientConnected) {
+                    // PVP 모드 시 게스트 서브 대기 (서브 행동 trigger를 통해 진행)
                 } else {
-                    const serveSkills = ['drive', 'clear', 'drop'];
-                    const randomServeSkill = serveSkills[Math.floor(Math.random() * serveSkills.length)];
-                    serve('B', randomServeSkill);
+                    // 싱글플레이 모드 시 AI 서브 자동 발사
+                    if (aiServeTimer > 0) {
+                        aiServeTimer--;
+                    } else {
+                        const serveSkills = ['drive', 'clear', 'drop'];
+                        const randomServeSkill = serveSkills[Math.floor(Math.random() * serveSkills.length)];
+                        serve('B', randomServeSkill);
+                    }
                 }
 
             } else if (gameState === 'PLAYING') {
                 playerA.vx = 0;
                 if (keys.ArrowLeft || touches.left) {
                     playerA.vx = -playerA.speed;
-                    playerA.facing = 'left';
+                    playerA.facing = 'right';
                 }
                 if (keys.ArrowRight || touches.right) {
                     playerA.vx = playerA.speed;
                     playerA.facing = 'right';
                 }
 
-                // 점프 입력 감지 (키보드 ArrowUp 및 모바일 touches.jump 동시 지원으로 완벽 작동 보장)
+                // 점프 입력 감지
                 if ((keys.ArrowUp || touches.jump) && playerA.isGrounded) {
                     playerA.vy = playerA.jumpForce;
                     playerA.isGrounded = false;
@@ -734,7 +1222,26 @@
                 if (playerA.x < 10) playerA.x = 10;
                 if (playerA.x > NET_X - playerA.width - 15) playerA.x = NET_X - playerA.width - 15;
 
-                updateAI();
+                // 플레이어 B (AI 혹은 PVP 게스트) 이동 제어
+                if (isPvpMode && hasClientConnected) {
+                    // 게스트 원격 제어 입력 동기화 처리
+                    playerB.vx = 0;
+                    if (clientInputs.keys.ArrowLeft || clientInputs.touches.left) {
+                        playerB.vx = -playerB.speed;
+                        playerB.facing = 'left';
+                    }
+                    if (clientInputs.keys.ArrowRight || clientInputs.touches.right) {
+                        playerB.vx = playerB.speed;
+                        playerB.facing = 'left';
+                    }
+                    if ((clientInputs.keys.ArrowUp || clientInputs.touches.jump) && playerB.isGrounded) {
+                        playerB.vy = playerB.jumpForce;
+                        playerB.isGrounded = false;
+                    }
+                } else {
+                    updateAI();
+                }
+
                 playerB.vy += GRAVITY;
                 playerB.x += playerB.vx;
                 playerB.y += playerB.vy;
@@ -779,9 +1286,12 @@
 
             if (playerA.swingTimer > 0) playerA.swingTimer--;
             if (playerB.swingTimer > 0) playerB.swingTimer--;
+
+            // 호스트일 경우 상태 동기화 송출
+            if (isHost) sendHostState();
         }
 
-        // --- STREAMING_CHUNK: Drawing players with dynamic eye/mouth expressions... ---
+        // --- STREAMING_CHUNK: Drawing characters and dynamic expressions... ---
         function drawPlayer(p, type) {
             ctx.save();
             
@@ -908,7 +1418,7 @@
             ctx.restore();
         }
 
-        // --- STREAMING_CHUNK: Rendering court lines, net grids and shuttlecock trails... ---
+        // --- STREAMING_CHUNK: Drawing court components and lines... ---
         function draw() {
             const bgGrad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
             bgGrad.addColorStop(0, '#7dd3fc');
@@ -1027,28 +1537,30 @@
             ctx.restore();
         }
 
-        // --- STREAMING_CHUNK: Running the animation game loop... ---
+        // --- STREAMING_CHUNK: Running main game loop and autojoin link listener... ---
         function gameLoop() {
             update();
             draw();
             requestAnimationFrame(gameLoop);
         }
 
-        document.getElementById('btnStartGame').addEventListener('click', () => {
-            initAudio();
-            document.getElementById('gameStartModal').classList.add('hidden');
-            scoreA = 0;
-            scoreB = 0;
-            updateScoreDisplay();
-            resetServe('A');
-        });
-
+        // 초기 싱글 플레이 기준 서브 준비
         resetServe('A');
         
         window.onload = function () {
             gameLoop();
+
+            // URL 파라미터 감지 후 초대 코드가 있을 때 PVP 입장 즉각 실행
+            const urlParams = new URLSearchParams(window.location.search);
+            const inviteRoom = urlParams.get('room');
+            if (inviteRoom && inviteRoom.length >= 6) {
+                initAudio();
+                document.getElementById('gameStartModal').classList.add('hidden');
+                connectToHost(inviteRoom);
+            }
         };
 
     </script>
 </body>
 </html>
+```eof
