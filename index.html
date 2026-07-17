@@ -2,12 +2,9 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <!-- 모바일 환경을 고려한 뷰포트 설정 (터치 줌 방지 및 반응형 레이아웃) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Retro Mini Badminton Challenge - Settings & PVP</title>
-    <!-- Tailwind CSS 및 Font-Awesome 아이콘 로드 -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 실시간 P2P 데이터 연동을 위한 PeerJS 시그널링 공식 CDN 탑재 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Jua&family=Nunito:wght@700;900&display=swap" rel="stylesheet">
     <style>
@@ -24,7 +21,6 @@
 </head>
 <body class="bg-slate-900 text-white min-h-screen flex flex-col justify-between items-center overflow-x-hidden p-2 sm:p-4">
 
-    <!-- 상단 헤더 영역 -->
     <header class="w-full max-w-4xl flex justify-between items-center px-4 py-2 bg-slate-800/80 rounded-2xl border border-slate-700/50 backdrop-blur-md mb-2 z-10">
         <div class="flex items-center gap-2">
             <span class="text-2xl sm:text-3xl">🏸</span>
@@ -37,7 +33,6 @@
                 <p class="text-[9px] sm:text-xs text-slate-400">PC: [Z]스매시 [X]클리어 [C]드롭 [Space]드라이브</p>
             </div>
         </div>
-        <!-- 실시간 스코어보드 -->
         <div class="flex items-center gap-4 bg-slate-950/80 px-4 py-1.5 rounded-xl border border-slate-700/30">
             <div class="text-center">
                 <span id="labelA" class="block text-[9px] text-red-400 font-bold">PLAYER A (나)</span>
@@ -49,7 +44,6 @@
                 <span id="scoreB" class="text-lg sm:text-2xl font-black text-blue-500">0</span>
             </div>
         </div>
-        <!-- 우측 컨트롤 버튼 그룹 -->
         <div class="flex items-center gap-2">
             <button id="btnFullscreen" class="bg-slate-700 hover:bg-slate-600 text-white text-xs sm:text-sm font-extrabold px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-1" title="전체화면 전환">
                 <span id="fsIcon">🔲</span> <span class="hidden sm:inline">FULL</span>
@@ -63,18 +57,14 @@
         </div>
     </header>
 
-    <!-- 게임 뷰포트 영역 -->
     <main class="relative w-full max-w-4xl aspect-[2/1] game-container bg-slate-950 rounded-2xl overflow-hidden border-4 border-slate-700">
-        <!-- 메인 게임 캔버스 -->
         <canvas id="gameCanvas" class="w-full h-full block"></canvas>
 
-        <!-- 게임 대기 로비 화면 (시작 화면) -->
         <div id="gameStartModal" class="absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center z-30 transition-all duration-300">
             <span class="text-5xl sm:text-7xl mb-4 animate-bounce">🏸</span>
             <h2 class="text-4xl sm:text-5xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500 drop-shadow mb-6">배드민턴 게임</h2>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl px-6">
-                <!-- 싱글 플레이 패널 -->
                 <div class="bg-slate-900 border border-slate-700 p-4 rounded-2xl text-center">
                     <h3 class="text-emerald-400 font-bold mb-3">🤖 혼자서 AI와 대결 (Single)</h3>
                     <div class="flex flex-col gap-2">
@@ -87,7 +77,6 @@
                     </div>
                 </div>
 
-                <!-- PVP 플레이 패널 -->
                 <div class="bg-slate-900 border border-slate-700 p-4 rounded-2xl text-center">
                     <h3 class="text-blue-400 font-bold mb-3">⚔️ 친구와 온라인 대전 (PVP)</h3>
                     <div class="flex flex-col gap-2">
@@ -99,15 +88,12 @@
             </div>
         </div>
 
-        <!-- PVP 대전방 제어 패널 -->
         <div id="pvpPanel" class="hidden absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center z-40 transition-all duration-300">
             <button id="btnBackToStart" class="absolute top-4 left-4 text-slate-400 hover:text-white text-sm font-bold flex items-center gap-1">
                 ◀ 처음으로
             </button>
             <h3 class="text-3xl font-black text-blue-400 mb-6 tracking-wide">⚔️ 온라인 PVP 대전</h3>
-            
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl px-6">
-                <!-- 방 만들기 카드 -->
                 <div class="bg-slate-900 border border-slate-700/60 p-6 rounded-2xl flex flex-col items-center justify-between text-center">
                     <span class="text-4xl mb-2">🏠</span>
                     <h4 class="text-xl font-extrabold text-white">직접 방 만들기 (Host)</h4>
@@ -121,8 +107,6 @@
                         </button>
                     </div>
                 </div>
-                
-                <!-- 참여하기 카드 -->
                 <div class="bg-slate-900 border border-slate-700/60 p-6 rounded-2xl flex flex-col items-center justify-between text-center">
                     <span class="text-4xl mb-2">🚀</span>
                     <h4 class="text-xl font-extrabold text-white">코드 입력해 참가 (Guest)</h4>
@@ -137,12 +121,10 @@
             </div>
         </div>
 
-        <!-- PVP 대기 로비 상세 현황 모달 -->
         <div id="pvpLobbyModal" class="hidden absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center z-50">
             <span class="text-5xl animate-spin mb-4">⏳</span>
             <h3 id="lobbyStatusTitle" class="text-2xl font-black text-white mb-2">방을 생성하는 중...</h3>
             <p id="lobbyStatusDesc" class="text-sm text-slate-400 mb-6 text-center max-w-sm px-4">네트워크 매칭 채널을 확보하고 있습니다.</p>
-            
             <div id="roomCodeArea" class="hidden flex flex-col items-center bg-slate-900 border border-slate-800 p-4 rounded-xl w-full max-w-md mb-6">
                 <span class="text-xs text-slate-400 font-bold mb-1">상대방 초대용 코드</span>
                 <span id="displayRoomId" class="text-3xl font-black text-yellow-400 tracking-widest select-all mb-4">----</span>
@@ -160,18 +142,15 @@
             </button>
         </div>
 
-        <!-- 자막 커스텀 설정 모달 -->
         <div id="settingsModal" class="hidden absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center z-40 transition-all duration-300">
             <h3 class="text-2xl font-black text-amber-400 mb-6">⚙️ 자막 및 게임 설정</h3>
             <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-full max-w-sm flex flex-col gap-5 text-sm">
-                <!-- 해설 켜고 끄기 토글 -->
                 <div class="flex justify-between items-center">
                     <span class="font-bold text-slate-300">해설 자막 표시</span>
                     <button id="btnToggleAnnounce" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-lg active:scale-95 transition-all">
                         켜짐 (ON)
                     </button>
                 </div>
-                <!-- 해설 글씨 크기 설정 -->
                 <div class="flex justify-between items-center">
                     <span class="font-bold text-slate-300">자막 글씨 크기</span>
                     <div class="flex gap-1.5">
@@ -202,7 +181,6 @@
         </div>
     </main>
 
-    <!-- 모바일 전용 가상 조작 버튼 패널 -->
     <footer class="w-full max-w-4xl grid grid-cols-12 gap-2 mt-2 px-1 pb-2">
         <div class="col-span-5 flex items-center gap-2">
             <button id="btnLeft" class="flex-1 aspect-square bg-slate-800/80 active:bg-slate-700 border-b-4 border-slate-950 active:border-b-0 rounded-2xl flex items-center justify-center text-2xl sm:text-3xl shadow-lg active:translate-y-[4px] transition-all" style="-webkit-tap-highlight-color: transparent;">◀</button>
@@ -331,26 +309,26 @@
             { x: 100, y: 60, scale: 0.8, speed: 0.1 }, { x: 450, y: 40, scale: 1.2, speed: 0.15 }, { x: 750, y: 80, scale: 0.6, speed: 0.08 }
         ];
 
-        // 플레이어 4인방 정의 (A1, A2, B1, B2)
+        // 플레이어 4인방 정의
         const playerA1 = {
             x: 220, y: GROUND_Y - 50, width: 32, height: 50, vx: 0, vy: 0,
             speed: 4.5, jumpForce: -8, isGrounded: true, color: '#ef4444', 
             swingTimer: 0, swingDuration: 12, racketAngle: 0, facing: 'right'
         };
 
-        const playerA2 = { // 내 파트너 (AI)
+        const playerA2 = {
             x: 100, y: GROUND_Y - 50, width: 32, height: 50, vx: 0, vy: 0,
             speed: 4.0, jumpForce: -8, isGrounded: true, color: '#f97316', 
             swingTimer: 0, swingDuration: 12, racketAngle: 0, facing: 'right'
         };
 
-        const playerB1 = { // 상대 전위 (AI 또는 PVP 게스트)
+        const playerB1 = {
             x: 550, y: GROUND_Y - 50, width: 32, height: 50, vx: 0, vy: 0,
             speed: 4.0, jumpForce: -8, isGrounded: true, color: '#3b82f6', 
             swingTimer: 0, swingDuration: 12, racketAngle: 0, facing: 'left'
         };
 
-        const playerB2 = { // 상대 후위 파트너 (AI)
+        const playerB2 = {
             x: 680, y: GROUND_Y - 50, width: 32, height: 50, vx: 0, vy: 0,
             speed: 4.0, jumpForce: -8, isGrounded: true, color: '#0ea5e9', 
             swingTimer: 0, swingDuration: 12, racketAngle: 0, facing: 'left'
@@ -426,7 +404,6 @@
         configureTouchBtn('btnLeft', 'left'); configureTouchBtn('btnRight', 'right'); configureTouchBtn('btnJump', 'jump');
         configureTouchBtn('btnSmash', 'smash'); configureTouchBtn('btnHit', 'clear'); configureTouchBtn('btnDrop', 'drop'); configureTouchBtn('btnDrive', 'drive');
 
-        // 게임 시작 모드 설정 공통 로직
         function prepareGameStart(isPvp, isDbl) {
             initAudio();
             isPvpMode = isPvp;
@@ -591,7 +568,6 @@
         document.getElementById('btnRestart').addEventListener('click', handleRestart);
         document.getElementById('btnModalRestart').addEventListener('click', handleRestart);
 
-        // 전체 화면 구현부
         const btnFullscreen = document.getElementById('btnFullscreen');
         const fsIcon = document.getElementById('fsIcon');
 
@@ -665,7 +641,6 @@
         }
 
         function triggerAnnounce(mainText, subText) {
-            // 자막 비활성화 상태인 경우 표시하지 않음
             if (!announceEnabled) return;
 
             applyAnnounceSize();
@@ -999,22 +974,15 @@
             ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(1, 0, 4.5, -Math.PI/2, Math.PI/2); ctx.fill(); ctx.restore();
         }
 
-        // 설정 모달 열고 닫기 바인딩
+        // 설정 모달 열고 닫기 및 크기 조절 이벤트 바인딩
         const btnSettings = document.getElementById('btnSettings');
         const settingsModal = document.getElementById('settingsModal');
         const btnCloseSettings = document.getElementById('btnCloseSettings');
         const btnToggleAnnounce = document.getElementById('btnToggleAnnounce');
 
-        btnSettings.addEventListener('click', () => {
-            initAudio();
-            settingsModal.classList.remove('hidden');
-        });
+        btnSettings.addEventListener('click', () => { initAudio(); settingsModal.classList.remove('hidden'); });
+        btnCloseSettings.addEventListener('click', () => { settingsModal.classList.add('hidden'); });
 
-        btnCloseSettings.addEventListener('click', () => {
-            settingsModal.classList.add('hidden');
-        });
-
-        // 자막 활성/비활성 토글 핸들러
         btnToggleAnnounce.addEventListener('click', () => {
             announceEnabled = !announceEnabled;
             if (announceEnabled) {
@@ -1023,29 +991,20 @@
             } else {
                 btnToggleAnnounce.innerText = "꺼짐 (OFF)";
                 btnToggleAnnounce.className = "px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 font-extrabold rounded-lg active:scale-95 transition-all";
-                // 활성화 중이던 잔여 자막 즉각 숨김 처리
                 document.getElementById('gameAnnounce').classList.remove('opacity-100', 'scale-100');
                 document.getElementById('gameAnnounce').classList.add('opacity-0', 'scale-75');
             }
         });
 
-        // 자막 크기 제어용 변수/버튼 바인딩
         const btnSizeSmall = document.getElementById('btnSizeSmall');
         const btnSizeMedium = document.getElementById('btnSizeMedium');
         const btnSizeLarge = document.getElementById('btnSizeLarge');
 
         function updateSizeButtonsUI() {
-            [btnSizeSmall, btnSizeMedium, btnSizeLarge].forEach(btn => {
-                btn.className = "px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-md active:scale-95 transition-all text-xs border border-slate-700";
-            });
-
-            if (announceSize === 'small') {
-                btnSizeSmall.className = "px-2.5 py-1 bg-blue-600 text-white font-bold rounded-md active:scale-95 transition-all text-xs";
-            } else if (announceSize === 'medium') {
-                btnSizeMedium.className = "px-2.5 py-1 bg-blue-600 text-white font-bold rounded-md active:scale-95 transition-all text-xs";
-            } else if (announceSize === 'large') {
-                btnSizeLarge.className = "px-2.5 py-1 bg-blue-600 text-white font-bold rounded-md active:scale-95 transition-all text-xs";
-            }
+            [btnSizeSmall, btnSizeMedium, btnSizeLarge].forEach(btn => { btn.className = "px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-md active:scale-95 transition-all text-xs border border-slate-700"; });
+            if (announceSize === 'small') btnSizeSmall.className = "px-2.5 py-1 bg-blue-600 text-white font-bold rounded-md active:scale-95 transition-all text-xs";
+            else if (announceSize === 'medium') btnSizeMedium.className = "px-2.5 py-1 bg-blue-600 text-white font-bold rounded-md active:scale-95 transition-all text-xs";
+            else if (announceSize === 'large') btnSizeLarge.className = "px-2.5 py-1 bg-blue-600 text-white font-bold rounded-md active:scale-95 transition-all text-xs";
         }
 
         btnSizeSmall.addEventListener('click', () => { announceSize = 'small'; updateSizeButtonsUI(); });
@@ -1060,7 +1019,8 @@
             const inviteRoom = urlParams.get('room');
             if (inviteRoom && inviteRoom.length >= 6) {
                 initAudio(); document.getElementById('gameStartModal').classList.add('hidden'); connectToHost(inviteRoom);
-            }</script>
+            }
+        };
+    </script>
 </body>
 </html>
-```eof
