@@ -270,6 +270,7 @@
             }
         }
 
+        // --- STREAMING_CHUNK: Initializing Audio Synths... ---
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         let audioCtx = null;
 
@@ -314,6 +315,7 @@
             if (isHost && conn && conn.open) soundQueue.push(type);
         }
 
+        // --- STREAMING_CHUNK: Declaring game variables (Slowed Down Physics)... ---
         let peer = null; let conn = null;
         let isPvpMode = false; let isHost = false; let isClient = false;
         let hasClientConnected = false; let lastReceivedState = null;
@@ -325,7 +327,10 @@
         const VIEW_WIDTH = 800; const VIEW_HEIGHT = 400;
         canvas.width = VIEW_WIDTH; canvas.height = VIEW_HEIGHT;
 
-        const GROUND_Y = 340; const GRAVITY = 0.18; const NET_X = VIEW_WIDTH / 2; const NET_HEIGHT = 80; 
+        // 공 속도 감소 요구에 따른 물리 엔진 파라미터 하향 조정
+        const GROUND_Y = 340; 
+        const GRAVITY = 0.14; // 이전 0.25 -> 0.14 로 늦춤 (체공 시간 증가)
+        const NET_X = VIEW_WIDTH / 2; const NET_HEIGHT = 80; 
         const COURT_LEFT_BOUND = 80; const COURT_RIGHT_BOUND = 720;
 
         const keys = { ArrowLeft: false, ArrowRight: false, ArrowUp: false, Space: false, KeyZ: false, KeyX: false, KeyC: false };
@@ -337,20 +342,23 @@
 
         const clouds = [{ x: 100, y: 60, scale: 0.8, speed: 0.1 }, { x: 450, y: 40, scale: 1.2, speed: 0.15 }, { x: 750, y: 80, scale: 0.6, speed: 0.08 }];
 
-        // 캐릭터 속성
-        const playerA1 = { x: 220, y: GROUND_Y - 50, width: 32, height: 50, vx: 0, vy: 0, speed: 3.5, jumpForce: -7, isGrounded: true, color: '#ef4444', swingTimer: 0, swingDuration: 12, racketAngle: 0 };
-        const playerA2 = { x: 100, y: GROUND_Y - 50, width: 32, height: 50, vx: 0, vy: 0, speed: 3.0, jumpForce: -7, isGrounded: true, color: '#f97316', swingTimer: 0, swingDuration: 12, racketAngle: 0 };
-        const playerB1 = { x: 550, y: GROUND_Y - 50, width: 32, height: 50, vx: 0, vy: 0, speed: 3.0, jumpForce: -7, isGrounded: true, color: '#3b82f6', swingTimer: 0, swingDuration: 12, racketAngle: 0 };
-        const playerB2 = { x: 680, y: GROUND_Y - 50, width: 32, height: 50, vx: 0, vy: 0, speed: 3.0, jumpForce: -7, isGrounded: true, color: '#0ea5e9', swingTimer: 0, swingDuration: 12, racketAngle: 0 };
+        // 캐릭터 속도도 중력에 맞춰 조금 부드럽게 조정
+        const playerA1 = { x: 220, y: GROUND_Y - 50, width: 32, height: 50, vx: 0, vy: 0, speed: 3.5, jumpForce: -6.5, isGrounded: true, color: '#ef4444', swingTimer: 0, swingDuration: 12, racketAngle: 0 };
+        const playerA2 = { x: 100, y: GROUND_Y - 50, width: 32, height: 50, vx: 0, vy: 0, speed: 3.0, jumpForce: -6.5, isGrounded: true, color: '#f97316', swingTimer: 0, swingDuration: 12, racketAngle: 0 };
+        const playerB1 = { x: 550, y: GROUND_Y - 50, width: 32, height: 50, vx: 0, vy: 0, speed: 3.0, jumpForce: -6.5, isGrounded: true, color: '#3b82f6', swingTimer: 0, swingDuration: 12, racketAngle: 0 };
+        const playerB2 = { x: 680, y: GROUND_Y - 50, width: 32, height: 50, vx: 0, vy: 0, speed: 3.0, jumpForce: -6.5, isGrounded: true, color: '#0ea5e9', swingTimer: 0, swingDuration: 12, racketAngle: 0 };
 
         const shuttlecock = { x: 200, y: 100, vx: 0, vy: 0, radius: 8, drag: 0.99, verticalDrag: 0.992, rotation: 0 };
+        
+        // 기술별 타구 속도 30% 정도 전체 하향하여 편안한 랠리 유도
         const techShots = {
-            smash: { vx: 15.0, vy: 2.5, sound: 'ting', name: "⚡ SMASH!", sub: "가파른 공격!" },
-            clear: { vx: 9.5, vy: -9.5, sound: 'tong', name: "🚀 CLEAR!", sub: "뒷공간으로 멀리!" },
-            drop:  { vx: 5.5, vy: -3.0, sound: 'tong', name: "🎈 DROP!", sub: "네트 앞 드롭!" },
-            drive: { vx: 12.5, vy: -0.8, sound: 'ting', name: "☄️ DRIVE!", sub: "빠른 직선 공격!" }
+            smash: { vx: 13.5, vy: 2.0, sound: 'ting', name: "⚡ SMASH!", sub: "가파른 공격!" },
+            clear: { vx: 8.5, vy: -9.5, sound: 'tong', name: "🚀 CLEAR!", sub: "뒷공간으로 멀리!" },
+            drop:  { vx: 4.5, vy: -3.0, sound: 'tong', name: "🎈 DROP!", sub: "네트 앞 드롭!" },
+            drive: { vx: 11.0, vy: -0.5, sound: 'ting', name: "☄️ DRIVE!", sub: "빠른 직선 공격!" }
         };
 
+        // --- STREAMING_CHUNK: Configuring controller events and input handling... ---
         window.addEventListener('keydown', (e) => {
             initAudio(); 
             if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space', 'KeyZ', 'KeyX', 'KeyC'].includes(e.code)) e.preventDefault();
@@ -439,6 +447,7 @@
         document.getElementById('btnOpenPVP').addEventListener('click', () => { initAudio(); document.getElementById('pvpPanel').classList.remove('hidden'); });
         document.getElementById('btnBackToStart').addEventListener('click', () => document.getElementById('pvpPanel').classList.add('hidden'));
 
+        // --- STREAMING_CHUNK: Coding PeerJS Host initialization for 1v1 and 2v2... ---
         function createHostRoom(isDbl) {
             initAudio(); isHost = true; isClient = false; prepareGameStart(true, isDbl);
             document.getElementById('pvpLobbyModal').classList.remove('hidden');
@@ -517,6 +526,7 @@
         document.getElementById('btnCopyCode').addEventListener('click', () => copyCode(document.getElementById('displayRoomId').innerText));
         document.getElementById('btnCopyLink').addEventListener('click', () => copyCode(window.location.origin + window.location.pathname + '?room=' + document.getElementById('displayRoomId').innerText));
 
+        // --- STREAMING_CHUNK: Coding Racket hit logic with slowed exact physics... ---
         function triggerAnnounce(mainText, subText) {
             if (!isSubtitleEnabled) return; // 설정에서 자막을 껐다면 표출 생략
             updateSubtitleSizeClass(); // 동적으로 텍스트 크기 결정 적용
@@ -548,8 +558,9 @@
 
         function serve(server, techType = 'drive') {
             playSound('ting'); gameState = 'PLAYING'; aiServeTimer = 0;
-            let vx = 8.5; let vy = -4.5;
-            if (techType === 'smash') { vx = 10; vy = -3.5; } else if (techType === 'clear') { vx = 7.0; vy = -8.0; } else if (techType === 'drop') { vx = 5.0; vy = -3.5; }
+            // 서브 물리 속도 하향 적용
+            let vx = 8.0; let vy = -5.0;
+            if (techType === 'smash') { vx = 9.5; vy = -3.5; } else if (techType === 'clear') { vx = 7.0; vy = -8.0; } else if (techType === 'drop') { vx = 4.5; vy = -3.5; }
             shuttlecock.vx = server === 'A' ? vx : -vx; shuttlecock.vy = vy; lastToucher = server;
             triggerAnnounce("SERVE!", "서브 발사!");
         }
@@ -567,6 +578,7 @@
             shuttlecock.vx = 0; shuttlecock.vy = 0;
         }
 
+        // --- STREAMING_CHUNK: Evaluating points rules and court bound lines... ---
         function checkPointsAndRules() {
             if (isClient) return;
             const netTopY = GROUND_Y - NET_HEIGHT;
@@ -596,7 +608,7 @@
                 gameState = 'GAME_OVER';
                 const isRed = scoreA >= 11;
                 document.getElementById('winnerText').innerText = isRed ? "RED TEAM WINS!" : "BLUE TEAM WINS!";
-                document.getElementById('winnerText').className = isRed ? "text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-yellow-500 drop-shadow" : "text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-500 drop-shadow";
+                document.getElementById('winnerText').className = isRed ? "text-4xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-yellow-500 drop-shadow" : "text-4xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-500 drop-shadow";
                 document.getElementById('gameOverModal').classList.remove('hidden');
                 return true;
             } return false;
@@ -621,6 +633,7 @@
             }
         });
 
+        // --- STREAMING_CHUNK: Advanced AI routines capable of Doubles logic... ---
         function updateAIAgent(ai, side, role) {
             const isTurn = (side === 'A' && shuttlecock.vx < 0 && shuttlecock.x < NET_X + 50) || (side === 'B' && shuttlecock.vx > 0 && shuttlecock.x > NET_X - 50);
             let hx = side === 'A' ? (role === 'front' ? 200 : 100) : (role === 'front' ? 600 : 700);
@@ -639,6 +652,7 @@
 
         const hGrav = (p) => { p.vy += GRAVITY; p.x += p.vx; p.y += p.vy; if (p.y >= GROUND_Y - p.height) { p.y = GROUND_Y - p.height; p.vy = 0; p.isGrounded = true; } };
 
+        // --- STREAMING_CHUNK: Network synchronizations and main update logic... ---
         function update() {
             if (gameState === 'START_SCREEN') { clouds.forEach(c => { c.x += c.speed; if (c.x > VIEW_WIDTH + 80) c.x = -80; }); return; }
             clouds.forEach(c => { c.x += c.speed; if (c.x > VIEW_WIDTH + 80) c.x = -80; });
@@ -704,6 +718,7 @@
             }
         }
 
+        // --- STREAMING_CHUNK: Drawing graphics with floating labels... ---
         function drawPlayer(p, type, label) {
             ctx.save(); ctx.fillStyle = p.color; ctx.shadowColor = 'rgba(0,0,0,0.15)'; ctx.shadowBlur = 4; ctx.shadowOffsetY = 4;
             const r = 6; ctx.beginPath(); ctx.moveTo(p.x + r, p.y); ctx.lineTo(p.x + p.width - r, p.y); ctx.quadraticCurveTo(p.x + p.width, p.y, p.x + p.width, p.y + r); ctx.lineTo(p.x + p.width, p.y + p.height - r); ctx.quadraticCurveTo(p.x + p.width, p.y + p.height, p.x + p.width - r, p.y + p.height); ctx.lineTo(p.x + r, p.y + p.height); ctx.quadraticCurveTo(p.x, p.y + p.height, p.x, p.y + p.height - r); ctx.lineTo(p.x, p.y + r); ctx.quadraticCurveTo(p.x, p.y, p.x + r, p.y); ctx.closePath(); ctx.fill();
